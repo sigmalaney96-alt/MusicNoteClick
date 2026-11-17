@@ -54,8 +54,8 @@
                 <div class="overlay-icon">♫</div>
                 <div class="overlay-kicker" id="overlay-kicker">LET'S GET THIS PARTY STARTED</div>
                 <h3 id="overlay-title">Your beat<br>is waiting<span>.</span></h3>
-                <p id="overlay-copy">Choose a song or try our demo beat to get grooving.</p>
-                <button class="primary-button" id="demo-button">PLAY DEMO BEAT <span>↗</span></button>
+                <p id="overlay-copy">Choose a song, or warm up with our house beat.</p>
+                <button class="primary-button" id="warmup-button">PLAY THE WARM-UP <span>↗</span></button>
                 <button class="install-button overlay-install" id="overlay-install" hidden>INSTALL THE APP ♪</button>
                 <div class="overlay-hint">TAP THE TILES OR USE D, F, J, K</div>
               </div>
@@ -70,6 +70,8 @@
             <form class="search" id="search-form"><label class="sr-only" for="search-input">Search songs or artists</label><span>⌕</span><input id="search-input" type="search" placeholder="Search songs or artists..." maxlength="100" required><button type="submit" aria-label="Search">↗</button></form>
             <div class="list-title"><span>THE TRACK LIST</span><span>30 SEC PREVIEWS</span></div>
             <div id="track-list" class="track-list" aria-live="polite"><p class="list-message">Finding some good vibes...</p></div>
+            <div class="list-title" id="history-title" hidden><span>PLAY HISTORY</span><span>TAP TO REPLAY</span></div>
+            <div id="history-list" class="track-list history-list"></div>
             <div class="library-footer"><span>✦</span><p>Music previews provided by <strong>iTunes.</strong><br>New discoveries are just a tap away.</p></div>
           </aside>
         </div>

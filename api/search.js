@@ -4,7 +4,10 @@ export default async function handler(req, res) {
   try {
     const url = new URL('https://itunes.apple.com/search');
     url.search = new URLSearchParams({ term, entity: 'song', media: 'music', limit: '20' });
-    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15', Accept: 'application/json' }
+    });
     if (!response.ok) throw new Error(`iTunes returned ${response.status}`);
     const data = await response.json();
     const tracks = (data.results || []).filter(track => track.previewUrl && track.trackName && track.artistName).map(track => ({

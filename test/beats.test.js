@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectBeats } from '../src/beats.js';
+import { detectBeats, syntheticBeats } from '../src/beats.js';
 import { allowedPreview } from '../api/audio.js';
 
 test('detects separated transients after the lead-in and assigns playable lanes', () => {
@@ -19,6 +19,15 @@ test('does not invent beats for silence and keeps the strongest nearby transient
   samples.fill(0.3, 2000, 2020);
   samples.fill(0.9, 2160, 2180);
   assert.deepEqual(detectBeats(buffer).map(beat => beat.time), [2.16]);
+});
+
+test('syntheticBeats builds an even playable grid for undecodable previews', () => {
+  const beats = syntheticBeats(10);
+  assert.ok(beats.length >= 15);
+  assert.equal(beats[0].time, 2);
+  assert.equal(beats[1].time - beats[0].time, 0.5);
+  assert.ok(beats.at(-1).time < 10);
+  assert.ok(beats.every(beat => beat.lane >= 0 && beat.lane < 4));
 });
 
 test('only allows HTTPS previews on the exact Apple audio host', () => {

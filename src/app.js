@@ -1,12 +1,13 @@
-import { detectBeats } from './beats.js';
+import { detectBeats, syntheticBeats } from './beats.js';
 
 const $ = selector => document.querySelector(selector);
 const elements = {
   stage: $('#stage'), tiles: $('#tiles'), overlay: $('#overlay'), kicker: $('#overlay-kicker'),
-  title: $('#overlay-title'), copy: $('#overlay-copy'), demo: $('#demo-button'),
+  title: $('#overlay-title'), copy: $('#overlay-copy'), warmup: $('#warmup-button'),
   score: $('#score'), lives: $('#lives'), status: $('#game-status'), stop: $('#stop-button'),
   nowTitle: $('#now-title'), nowArtist: $('#now-artist'), feedback: $('#feedback'),
-  list: $('#track-list'), form: $('#search-form'), input: $('#search-input')
+  list: $('#track-list'), form: $('#search-form'), input: $('#search-input'),
+  historyList: $('#history-list'), historyTitle: $('#history-title')
 };
 const LEAD = 1.8;
 const WINDOW = 0.22;
@@ -16,16 +17,16 @@ let generation = 0;
 let searchController;
 let feedbackTimer;
 
-function showOverlay(kicker, title, copy, button = 'PLAY DEMO BEAT') {
+function showOverlay(kicker, title, copy, button = 'PLAY THE WARM-UP') {
   elements.kicker.textContent = kicker;
   elements.title.textContent = title;
   elements.copy.textContent = copy;
-  elements.demo.innerHTML = '';
-  elements.demo.append(document.createTextNode(button + ' '));
+  elements.warmup.innerHTML = '';
+  elements.warmup.append(document.createTextNode(button + ' '));
   const arrow = document.createElement('span');
   arrow.textContent = '↗';
-  elements.demo.append(arrow);
-  elements.demo.hidden = false;
+  elements.warmup.append(arrow);
+  elements.warmup.hidden = false;
   elements.overlay.hidden = false;
 }
 
@@ -33,10 +34,16 @@ function clearRound() {
   generation++;
   if (round) {
     cancelAnimationFrame(round.frame);
-    try { round.source.stop(); } catch (error) {
-      if (error.name !== 'InvalidStateError') throw error;
+    if (round.source) {
+      try { round.source.stop(); } catch (error) {
+        if (error.name !== 'InvalidStateError') throw error;
+      }
+      round.source.disconnect();
     }
-    round.source.disconnect();
+    if (round.element) {
+      round.element.pause();
+      round.element.removeAttribute('src');
+    }
     round = null;
   }
   elements.tiles.replaceChildren();
@@ -59,15 +66,16 @@ function notify(text) {
 }
 
 function finish(won) {
-  const score = round.score;
+  const { score, track } = round;
+  if (track && !track.practice) saveHistory(track, score);
   clearRound();
   elements.status.textContent = won ? 'ROUND COMPLETE' : 'ROUND OVER';
-  showOverlay(won ? 'THAT WAS A WHOLE VIBE' : 'KEEP THAT HEAD UP', won ? 'Nice moves!' : 'One more time?', `You scored ${score} points. Pick another track or play the demo again.`, 'PLAY DEMO AGAIN');
+  showOverlay(won ? 'THAT WAS A WHOLE VIBE' : 'KEEP THAT HEAD UP', won ? 'Nice moves!' : 'One more time?', `You scored ${score} points. Pick another track or play it again.`, 'PLAY IT AGAIN');
 }
 
 function tick() {
   if (!round) return;
-  const elapsed = context.currentTime - round.start;
+  const elapsed = round.clock();
   for (const beat of round.beats) {
     if (!beat.hit && !beat.missed && elapsed > beat.time + WINDOW) {
       beat.missed = true;
@@ -96,7 +104,7 @@ function tick() {
 
 function tap(lane) {
   if (!round) return;
-  const elapsed = context.currentTime - round.start;
+  const elapsed = round.clock();
   const beat = round.beats.find(item => !item.hit && !item.missed && item.lane === lane && Math.abs(item.time - elapsed) <= WINDOW);
   if (!beat) {
     notify('WAIT FOR IT!');
@@ -119,32 +127,58 @@ async function startTrack(track) {
   elements.lives.setAttribute('aria-label', '3 lives remaining');
   elements.status.textContent = 'GETTING THE BEAT READY';
   showOverlay('HANG TIGHT', 'Finding the beat...', 'Getting your track ready to play.');
-  elements.demo.hidden = true;
+  elements.warmup.hidden = true;
   elements.stop.hidden = false;
   try {
-    context ||= new AudioContext();
+    context ||= new (window.AudioContext || window.webkitAudioContext)();
     await context.resume();
-    let buffer;
-    if (track.demo) buffer = makeDemo(context);
-    else {
-      const response = await fetch(`/api/audio?url=${encodeURIComponent(track.preview)}`);
+    let source = null;
+    let element = null;
+    let beats;
+    let duration;
+    let clock;
+    const startBuffer = buffer => {
+      // If a preview has no clear transients, fall back to a steady grid so it still plays.
+      beats = detectBeats(buffer);
+      if (!beats.length) beats = syntheticBeats(buffer.duration);
+      duration = buffer.duration;
+      source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(context.destination);
+      const start = context.currentTime + 0.1;
+      clock = () => context.currentTime - start;
+      source.start(start);
+    };
+    if (track.practice) {
+      startBuffer(makePractice(context));
+    } else {
+      const audioUrl = `/api/audio?url=${encodeURIComponent(track.preview)}`;
+      const response = await fetch(audioUrl);
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Could not load this preview.');
       }
-      buffer = await context.decodeAudioData(await response.arrayBuffer());
+      try {
+        startBuffer(await context.decodeAudioData(await response.arrayBuffer()));
+      } catch (decodeError) {
+        // Some browsers cannot decode AAC previews with Web Audio. Play the file
+        // through a media element instead and keep a steady beat grid.
+        console.warn('Preview decode failed, using direct playback:', decodeError);
+        element = new Audio(audioUrl);
+        await element.play();
+        duration = Number.isFinite(element.duration) ? element.duration : 30;
+        beats = syntheticBeats(duration);
+        clock = () => element.currentTime;
+      }
     }
-    if (current !== generation) return;
-    const beats = detectBeats(buffer);
-    if (!beats.length) throw new Error('No clear beats found in this preview. Try another track!');
-    const source = context.createBufferSource();
-    source.buffer = buffer;
-    source.connect(context.destination);
-    const start = context.currentTime + 0.1;
-    round = { source, start, duration: buffer.duration, beats, score: 0, lives: 3, frame: 0 };
+    if (current !== generation) {
+      if (source) try { source.stop(); } catch { /* already stopped */ }
+      if (element) element.pause();
+      return;
+    }
+    round = { source, element, track, duration, beats, clock, score: 0, lives: 3, frame: 0 };
     elements.overlay.hidden = true;
     elements.status.textContent = 'FEEL THE BEAT';
-    source.start(start);
     tick();
   } catch (error) {
     if (current !== generation) return;
@@ -155,7 +189,7 @@ async function startTrack(track) {
   }
 }
 
-function makeDemo(audioContext) {
+function makePractice(audioContext) {
   const rate = audioContext.sampleRate;
   const duration = 22;
   const buffer = audioContext.createBuffer(1, rate * duration, rate);
@@ -174,21 +208,94 @@ function makeDemo(audioContext) {
   return buffer;
 }
 
+function mapTrack(track) {
+  return {
+    id: track.trackId ?? track.id,
+    title: track.trackName ?? track.title,
+    artist: track.artistName ?? track.artist,
+    artwork: track.artworkUrl100 ?? track.artwork,
+    preview: track.previewUrl ?? track.preview,
+    collection: track.collectionName ?? track.collection
+  };
+}
+
+async function fetchTracks(term, signal) {
+  try {
+    const response = await fetch(`/api/search?term=${encodeURIComponent(term)}`, { signal });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Search failed.');
+    return data.tracks;
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    // The iTunes Search API allows cross-origin reads, so the browser can ask
+    // directly if the same-origin proxy is unavailable.
+    console.warn('Proxy search failed, trying iTunes directly:', error);
+    const url = new URL('https://itunes.apple.com/search');
+    url.search = new URLSearchParams({ term, entity: 'song', media: 'music', limit: '20' });
+    const response = await fetch(url, { signal });
+    if (!response.ok) throw new Error('Search failed. Try again in a moment.');
+    const data = await response.json();
+    return (data.results || []).filter(track => track.previewUrl && track.trackName && track.artistName).map(mapTrack);
+  }
+}
+
+function saveHistory(track, score) {
+  try {
+    const history = JSON.parse(localStorage.getItem('mnc-history') || '[]')
+      .filter(entry => entry.title !== track.title || entry.artist !== track.artist);
+    history.unshift({ title: track.title, artist: track.artist, artwork: track.artwork, preview: track.preview, score });
+    localStorage.setItem('mnc-history', JSON.stringify(history.slice(0, 10)));
+    renderHistory();
+  } catch (error) {
+    console.warn('Play history unavailable:', error);
+  }
+}
+
+function renderHistory() {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('mnc-history') || '[]'); } catch { return; }
+  elements.historyTitle.hidden = !history.length;
+  elements.historyList.replaceChildren();
+  history.forEach(entry => {
+    const button = document.createElement('button');
+    button.className = 'track';
+    button.setAttribute('aria-label', `Replay ${entry.title} by ${entry.artist}`);
+    const art = document.createElement('img');
+    art.src = entry.artwork || '/icons/icon-192.png';
+    art.alt = '';
+    art.loading = 'lazy';
+    const info = document.createElement('span');
+    info.className = 'track-info';
+    const title = document.createElement('strong');
+    title.textContent = entry.title;
+    const artist = document.createElement('small');
+    artist.textContent = entry.artist;
+    info.append(title, artist);
+    const score = document.createElement('span');
+    score.className = 'history-score';
+    score.textContent = String(entry.score).padStart(4, '0');
+    const replay = document.createElement('span');
+    replay.className = 'track-play';
+    replay.textContent = '↻';
+    button.append(art, info, score, replay);
+    button.addEventListener('click', () => startTrack(entry));
+    elements.historyList.append(button);
+  });
+}
+
 async function search(term) {
   searchController?.abort();
   const controller = new AbortController();
   searchController = controller;
   elements.list.innerHTML = '<p class="list-message">Finding some good vibes...</p>';
   try {
-    const response = await fetch(`/api/search?term=${encodeURIComponent(term)}`, { signal: controller.signal });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Search failed.');
+    const tracks = await fetchTracks(term, controller.signal);
     elements.list.replaceChildren();
-    if (!data.tracks.length) {
+    if (!tracks.length) {
       elements.list.textContent = 'No tracks found. Try another search!';
       return;
     }
-    data.tracks.forEach((track, index) => {
+    tracks.forEach((track, index) => {
       const button = document.createElement('button');
       button.className = 'track';
       button.setAttribute('aria-label', `Play ${track.title} by ${track.artist}`);
@@ -225,11 +332,11 @@ elements.form.addEventListener('submit', event => {
   const term = elements.input.value.trim();
   if (term) search(term);
 });
-elements.demo.addEventListener('click', () => startTrack({ title: 'The Demo Groove', artist: 'MusicNoteClick', demo: true }));
+elements.warmup.addEventListener('click', () => startTrack({ title: 'The Warm-Up Groove', artist: 'MusicNoteClick', practice: true }));
 elements.stop.addEventListener('click', () => {
   clearRound();
   elements.status.textContent = 'READY WHEN YOU ARE';
-  showOverlay('READY FOR ANOTHER?', 'Your beat is waiting.', 'Choose a song or try our demo beat to get grooving.');
+  showOverlay('READY FOR ANOTHER?', 'Your beat is waiting.', 'Choose a song, or warm up with our house beat.');
 });
 elements.stage.addEventListener('pointerdown', event => {
   if (!round) return;
@@ -249,6 +356,7 @@ document.addEventListener('visibilitychange', () => {
     showOverlay('WELCOME BACK', 'Ready to groove?', 'Your round ended while the app was away. Pick a track to play again.');
   }
 });
+renderHistory();
 search('pop hits');
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(error => console.error('Offline support unavailable:', error));
 

@@ -17,7 +17,11 @@ export default async function handler(req, res) {
     let response;
     for (let redirects = 0; redirects <= 3; redirects++) {
       if (!allowedPreview(url)) return res.status(400).json({ error: 'Invalid preview redirect.' });
-      response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(15000) });
+      response = await fetch(url, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(15000),
+        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15', Accept: 'audio/*,*/*' }
+      });
       if (response.status < 300 || response.status >= 400) break;
       const location = response.headers.get('location');
       if (!location || redirects === 3) throw new Error('Invalid preview redirect');

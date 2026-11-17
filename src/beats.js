@@ -29,6 +29,15 @@ export function detectBeats(buffer) {
   return selected.map((beat, index) => ({ time: beat.time, lane: laneFor(index), hit: false }));
 }
 
+// Fallback grid for previews the browser cannot decode — keeps every song playable.
+export function syntheticBeats(duration) {
+  const beats = [];
+  for (let time = 2, index = 0; time < duration - 0.3; time += 0.5, index++) {
+    beats.push({ time, lane: laneFor(index), hit: false });
+  }
+  return beats;
+}
+
 function laneFor(index) {
   // A deterministic pattern avoids adjacent repeated lanes without feeling random.
   return [0, 2, 1, 3, 1, 0, 3, 2, 0, 3, 2, 1][index % 12];
