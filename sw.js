@@ -1,5 +1,5 @@
-const CACHE = 'musicnoteclick-v1';
-const SHELL = ['/', '/style.css', '/src/app.js', '/src/beats.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
+const CACHE = 'musicnoteclick-v2';
+const SHELL = ['/', '/play', '/play.html', '/style.css', '/src/app.js', '/src/beats.js', '/src/install.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL))));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {

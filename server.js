@@ -14,7 +14,8 @@ const server = createServer(async (req, res) => {
   res.send = value => res.end(value);
   if (url.pathname === '/api/search') return search(req, res);
   if (url.pathname === '/api/audio') return audio(req, res);
-  const path = resolve(root, `.${url.pathname === '/' ? '/index.html' : url.pathname}`);
+  const routes = { '/': '/index.html', '/play': '/play.html' };
+  const path = resolve(root, `.${routes[url.pathname] || url.pathname}`);
   if (!path.startsWith(root + sep) || !types[extname(path)]) {
     res.statusCode = 404;
     return res.end('Not found');

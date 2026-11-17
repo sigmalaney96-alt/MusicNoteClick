@@ -2,6 +2,8 @@
 
 A colorful, installable rhythm game built for iTunes song previews. Search for a track, then tap its tiles at the hit line (or use D, F, J and K). Beat detection runs locally on the decoded preview; three misses end a round. A synthesized demo beat works without the catalog.
 
+The landing page (`/`) explains how to install the app on iOS, Android, and desktop, with a one-tap install button where the browser supports it. After installation (or when launched from the home screen), players are taken straight to the game at `/play`.
+
 ## Run locally
 
 Requires Node.js 20 or newer. Run `npm run dev`, then open http://localhost:3000. Run `npm test` for the focused tests.

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#161025">
+    <meta name="description" content="Tap into your favorite tracks with MusicNoteClick, a colorful music rhythm game.">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="stylesheet" href="/style.css">
+    <title>MusicNoteClick — play</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="MusicNoteClick home">
+          <span class="brand-icon">♪</span><span>MusicNote<span>Click</span><small>FIND YOUR RHYTHM</small></span>
+        </a>
+        <div class="top-right"><button class="install-button" id="install-button" hidden>INSTALL ♪</button><span class="live-dot"></span> YOUR DAILY DOSE OF RHYTHM <span class="sparkle">✳</span></div>
+      </header>
+
+      <main>
+        <section class="intro">
+          <div class="intro-copy">
+            <div class="eyebrow"><span>✦</span> YOUR NEW HAPPY PLACE <span>✦</span></div>
+            <h1>Good music.<br><em>Great moves.</em></h1>
+            <p>Pick a track, catch the beat, and let your fingers do the dancing.</p>
+            <div class="intro-tags"><span>♫ &nbsp; REAL MUSIC</span><span>✦ &nbsp; BIG ENERGY</span><span>♥ &nbsp; JUST FOR FUN</span></div>
+          </div>
+          <div class="intro-art" aria-hidden="true">
+            <span class="art-star star-one">✳</span><span class="art-star star-two">✦</span>
+            <div class="record"><div class="record-inner"><span>♫</span></div></div>
+            <div class="art-sticker">LET'S<br>PLAY <span>↗</span></div>
+            <div class="art-note">♪</div>
+          </div>
+        </section>
+
+        <div class="section-heading"><div><div class="eyebrow dark">✦ &nbsp; READY, SET, PLAY</div><h2>Make some <em>noise.</em></h2></div><p>THE STAGE IS ALL YOURS <span>↘</span></p></div>
+
+        <div class="play-layout">
+          <section class="game-card" aria-label="Rhythm game">
+            <div class="game-top">
+              <div><span class="tiny-label">NOW PLAYING</span><strong id="now-title">Pick your track</strong><span id="now-artist">Your next favorite is waiting →</span></div>
+              <div class="game-stats"><div><span>SCORE</span><strong id="score">0000</strong></div><div><span>LIVES</span><strong id="lives" aria-label="3 lives remaining">♥ ♥ ♥</strong></div></div>
+            </div>
+            <div class="stage" id="stage">
+              <div class="lane-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+              <div class="stage-decor decor-left">✧</div><div class="stage-decor decor-right">✳</div>
+              <div class="tiles" id="tiles" aria-hidden="true"></div>
+              <div class="hit-line"><span>✦</span></div>
+              <div class="lane-keys" aria-hidden="true"><span>D</span><span>F</span><span>J</span><span>K</span></div>
+              <div class="stage-overlay" id="overlay">
+                <div class="overlay-icon">♫</div>
+                <div class="overlay-kicker" id="overlay-kicker">LET'S GET THIS PARTY STARTED</div>
+                <h3 id="overlay-title">Your beat<br>is waiting<span>.</span></h3>
+                <p id="overlay-copy">Choose a song or try our demo beat to get grooving.</p>
+                <button class="primary-button" id="demo-button">PLAY DEMO BEAT <span>↗</span></button>
+                <button class="install-button overlay-install" id="overlay-install" hidden>INSTALL THE APP ♪</button>
+                <div class="overlay-hint">TAP THE TILES OR USE D, F, J, K</div>
+              </div>
+              <div class="feedback" id="feedback" aria-live="polite"></div>
+            </div>
+            <div class="game-bottom"><span><span class="pulse-dot"></span> <span id="game-status">READY WHEN YOU ARE</span></span><button id="stop-button" hidden>END ROUND ×</button><span>MADE FOR MAIN CHARACTER MOMENTS ✦</span></div>
+          </section>
+
+          <aside class="library">
+            <div class="library-head"><div><div class="eyebrow dark">♫ &nbsp; THE GOOD STUFF</div><h2>Pick a <em>track.</em></h2></div><span class="library-star">✳</span></div>
+            <p class="library-description">Find a favorite and turn it all the way up.</p>
+            <form class="search" id="search-form"><label class="sr-only" for="search-input">Search songs or artists</label><span>⌕</span><input id="search-input" type="search" placeholder="Search songs or artists..." maxlength="100" required><button type="submit" aria-label="Search">↗</button></form>
+            <div class="list-title"><span>THE TRACK LIST</span><span>30 SEC PREVIEWS</span></div>
+            <div id="track-list" class="track-list" aria-live="polite"><p class="list-message">Finding some good vibes...</p></div>
+            <div class="library-footer"><span>✦</span><p>Music previews provided by <strong>iTunes.</strong><br>New discoveries are just a tap away.</p></div>
+          </aside>
+        </div>
+        <div class="how-to"><span class="how-number">01</span><div><strong>CHOOSE YOUR JAM</strong><small>Find a song that moves you.</small></div><span class="how-arrow">↗</span><span class="how-number">02</span><div><strong>FOLLOW THE BEAT</strong><small>Tap when tiles reach the line.</small></div><span class="how-arrow">↗</span><span class="how-number">03</span><div><strong>KEEP THE VIBE ALIVE</strong><small>Miss three and it's a wrap.</small></div></div>
+      </main>
+      <footer><span>MusicNoteClick <b>✳</b></span><span>MADE TO MOVE YOU. © 2026</span><span>GOOD VIBES ONLY ♡</span></footer>
+    </div>
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>
