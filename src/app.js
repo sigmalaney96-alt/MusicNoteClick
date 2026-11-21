@@ -10,9 +10,10 @@ const elements = {
   historyList: $('#history-list'), historyTitle: $('#history-title'),
   difficultyHint: $('#difficulty-hint'), holdToggle: $('#hold-toggle'),
   winResult: $('#win-result'), winArtwork: $('#win-artwork'), winTrack: $('#win-track'),
-  winArtist: $('#win-artist'), winScore: $('#win-score'), continue: $('#continue-button')
+  winArtist: $('#win-artist'), winScore: $('#win-score'), lossResult: $('#loss-result'),
+  lossScore: $('#loss-score'), continue: $('#continue-button')
 };
-const LEAD = 1.35;
+const LEAD = 0.9;
 const KEYS = ['d', 'f', 'j', 'k'];
 let context;
 let round;
@@ -76,16 +77,19 @@ function finish(won) {
   clearRound();
   elements.status.textContent = won ? 'ROUND COMPLETE' : 'ROUND OVER';
   elements.winResult.hidden = !won;
+  elements.lossResult.hidden = won;
   elements.continue.hidden = !won;
-  elements.action.hidden = won || !lastTrack;
+  elements.action.hidden = !lastTrack;
+  elements.lossScore.textContent = String(score).padStart(4, '0');
+  if (!won) elements.action.innerHTML = 'TRY AGAIN <span>↗</span>';
   if (won && track) {
     elements.winArtwork.src = track.artwork || '/icons/icon-192.png';
     elements.winTrack.textContent = track.title;
     elements.winArtist.textContent = track.artist;
     elements.winScore.textContent = String(score).padStart(4, '0');
   }
-  showOverlay(won ? 'THAT WAS A WHOLE VIBE' : 'KEEP THAT HEAD UP', won ? 'You did it!' : 'One more time?',
-    won ? 'You made it to the end of the song.' : `You scored ${score} points. Play the same song again or pick a new one.`, !won);
+  showOverlay(won ? 'THAT WAS A WHOLE VIBE' : 'ROUND OVER', won ? 'You did it!' : 'Out of hearts!',
+    won ? 'You made it to the end of the song.' : 'Tap TRY AGAIN to take another shot at this song.', !won);
   elements.continue.hidden = !won;
 }
 
@@ -109,15 +113,26 @@ function missBeat(beat, message = 'MISS!') {
   if (!round.lives) finish(false);
 }
 
-function press(lane) {
+function press(lane, point) {
   if (!round) return;
   const elapsed = round.clock();
-  // Tapping a lane hits its nearest on-screen tile — no need to wait for the line.
-  const beat = round.beats
+  const candidates = round.beats
     .filter(item => !item.hit && !item.missed && !item.holding && item.lane === lane &&
       item.time - elapsed <= LEAD)
-    .sort((a, b) => Math.abs(a.time - elapsed) - Math.abs(b.time - elapsed))[0];
+    .sort((a, b) => Math.abs(a.time - elapsed) - Math.abs(b.time - elapsed));
+  const beat = point
+    ? candidates.find(item => {
+      if (!item.element) return false;
+      const rect = item.element.getBoundingClientRect();
+      return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+    })
+    : candidates[0];
   if (!beat) {
+    const nearbyTile = point && candidates.find(item => item.element);
+    if (nearbyTile) {
+      missBeat(nearbyTile, 'OFF TILE!');
+      return;
+    }
     round.lives--;
     updateStats();
     notify('EMPTY LANE!');
@@ -185,7 +200,9 @@ async function startTrack(track) {
   elements.lives.setAttribute('aria-label', '3 lives remaining');
   elements.status.textContent = 'GETTING THE BEAT READY';
   elements.winResult.hidden = true;
+  elements.lossResult.hidden = true;
   elements.continue.hidden = true;
+  elements.action.innerHTML = 'PLAY IT AGAIN <span>↗</span>';
   showOverlay('HANG TIGHT', 'Finding the beat...', 'Getting your track ready to play.');
   elements.stop.hidden = false;
   try {
@@ -402,7 +419,7 @@ elements.stage.addEventListener('pointerdown', event => {
   const rect = elements.stage.getBoundingClientRect();
   const lane = Math.max(0, Math.min(3, Math.floor((event.clientX - rect.left) / rect.width * 4)));
   activePointers.set(event.pointerId, lane);
-  press(lane);
+  press(lane, { x: event.clientX, y: event.clientY });
 });
 for (const type of ['pointerup', 'pointercancel']) {
   elements.stage.addEventListener(type, event => {

@@ -22,7 +22,7 @@ export function detectBeats(buffer) {
   const selected = [];
   for (const candidate of candidates) {
     const previous = selected[selected.length - 1];
-    if (previous && candidate.time - previous.time < 0.22) {
+    if (previous && candidate.time - previous.time < 0.17) {
       if (candidate.strength > previous.strength) selected[selected.length - 1] = candidate;
     } else selected.push(candidate);
   }
@@ -30,7 +30,7 @@ export function detectBeats(buffer) {
 }
 
 // Fallback grid for previews the browser cannot decode — keeps every song playable.
-export function syntheticBeats(duration, spacing = 0.25) {
+export function syntheticBeats(duration, spacing = 0.2) {
   const beats = [];
   for (let time = 2, index = 0; time < duration - 0.3; time += spacing, index++) {
     beats.push({ time, lane: laneFor(index), hit: false });
