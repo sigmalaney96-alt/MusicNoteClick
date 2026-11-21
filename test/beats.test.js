@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectBeats, syntheticBeats } from '../src/beats.js';
+import { detectBeats, syntheticBeats, applyDifficulty, DIFFICULTY } from '../src/beats.js';
 import { allowedPreview } from '../api/audio.js';
 
 test('detects separated transients after the lead-in and assigns playable lanes', () => {
@@ -22,12 +22,26 @@ test('does not invent beats for silence and keeps the strongest nearby transient
 });
 
 test('syntheticBeats builds an even playable grid for undecodable previews', () => {
-  const beats = syntheticBeats(10);
+  const beats = syntheticBeats(10, 0.5);
   assert.ok(beats.length >= 15);
   assert.equal(beats[0].time, 2);
   assert.equal(beats[1].time - beats[0].time, 0.5);
   assert.ok(beats.at(-1).time < 10);
   assert.ok(beats.every(beat => beat.lane >= 0 && beat.lane < 4));
+});
+
+test('applyDifficulty thins beats, marks hold tiles, and tightens windows per level', () => {
+  const base = Array.from({ length: 12 }, (_, i) => ({ time: 2 + i * 0.5, lane: i % 4, hit: false }));
+  const easy = applyDifficulty(base, 'easy');
+  const medium = applyDifficulty(base, 'medium');
+  const hard = applyDifficulty(base, 'hard');
+  assert.equal(easy.length, 4);
+  assert.equal(medium.length, 6);
+  assert.equal(hard.length, 12);
+  for (const beats of [easy, medium, hard]) assert.ok(beats.some(beat => beat.hold > 0));
+  assert.ok(DIFFICULTY.hard.window < DIFFICULTY.medium.window);
+  assert.ok(DIFFICULTY.medium.window < DIFFICULTY.easy.window);
+  assert.ok(DIFFICULTY.hard.score > DIFFICULTY.easy.score);
 });
 
 test('only allows HTTPS previews on the exact Apple audio host', () => {

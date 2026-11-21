@@ -30,12 +30,27 @@ export function detectBeats(buffer) {
 }
 
 // Fallback grid for previews the browser cannot decode — keeps every song playable.
-export function syntheticBeats(duration) {
+export function syntheticBeats(duration, spacing = 0.35) {
   const beats = [];
-  for (let time = 2, index = 0; time < duration - 0.3; time += 0.5, index++) {
+  for (let time = 2, index = 0; time < duration - 0.3; time += spacing, index++) {
     beats.push({ time, lane: laneFor(index), hit: false });
   }
   return beats;
+}
+
+// Easy thins the beat map and widens the timing window; hard keeps every beat
+// with a tight window and more hold tiles. Score multiplies with difficulty.
+export const DIFFICULTY = {
+  easy: { every: 3, window: 0.3, holdEvery: 4, hold: 0.4, score: 1, label: 'EASY' },
+  medium: { every: 2, window: 0.22, holdEvery: 4, hold: 0.5, score: 1.5, label: 'MEDIUM' },
+  hard: { every: 1, window: 0.15, holdEvery: 3, hold: 0.6, score: 2, label: 'HARD' }
+};
+
+export function applyDifficulty(beats, level = 'medium') {
+  const cfg = DIFFICULTY[level] || DIFFICULTY.medium;
+  return beats
+    .filter((_, index) => index % cfg.every === 0)
+    .map((beat, index) => ({ ...beat, hold: (index + 1) % cfg.holdEvery === 0 ? cfg.hold : 0, hit: false }));
 }
 
 function laneFor(index) {

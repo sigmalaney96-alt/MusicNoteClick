@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#161025">
     <meta name="description" content="Tap into your favorite tracks with MusicNoteClick, a colorful music rhythm game.">
     <link rel="manifest" href="/manifest.webmanifest">
@@ -41,7 +41,7 @@
         <div class="play-layout">
           <section class="game-card" aria-label="Rhythm game">
             <div class="game-top">
-              <div><span class="tiny-label">NOW PLAYING</span><strong id="now-title">Pick your track</strong><span id="now-artist">Your next favorite is waiting →</span></div>
+              <div><span class="tiny-label">NOW PLAYING</span><strong id="now-title">Pick your track</strong><span id="now-artist">Your next favorite is waiting →</span><span id="now-difficulty" class="difficulty-badge" hidden></span></div>
               <div class="game-stats"><div><span>SCORE</span><strong id="score">0000</strong></div><div><span>LIVES</span><strong id="lives" aria-label="3 lives remaining">♥ ♥ ♥</strong></div></div>
             </div>
             <div class="stage" id="stage">
@@ -54,10 +54,10 @@
                 <div class="overlay-icon">♫</div>
                 <div class="overlay-kicker" id="overlay-kicker">LET'S GET THIS PARTY STARTED</div>
                 <h3 id="overlay-title">Your beat<br>is waiting<span>.</span></h3>
-                <p id="overlay-copy">Choose a song, or warm up with our house beat.</p>
-                <button class="primary-button" id="warmup-button">PLAY THE WARM-UP <span>↗</span></button>
+                <p id="overlay-copy">Pick a song from the track list to start your round.</p>
+                <button class="primary-button" id="overlay-action" hidden>PLAY IT AGAIN <span>↗</span></button>
                 <button class="install-button overlay-install" id="overlay-install" hidden>INSTALL THE APP ♪</button>
-                <div class="overlay-hint">TAP THE TILES OR USE D, F, J, K</div>
+                <div class="overlay-hint">TAP OR HOLD TILES · KEYS D F J K</div>
               </div>
               <div class="feedback" id="feedback" aria-live="polite"></div>
             </div>
@@ -68,6 +68,12 @@
             <div class="library-head"><div><div class="eyebrow dark">♫ &nbsp; THE GOOD STUFF</div><h2>Pick a <em>track.</em></h2></div><span class="library-star">✳</span></div>
             <p class="library-description">Find a favorite and turn it all the way up.</p>
             <form class="search" id="search-form"><label class="sr-only" for="search-input">Search songs or artists</label><span>⌕</span><input id="search-input" type="search" placeholder="Search songs or artists..." maxlength="100" required><button type="submit" aria-label="Search">↗</button></form>
+            <div class="list-title"><span>DIFFICULTY</span><span id="difficulty-hint">THE CLASSIC GROOVE</span></div>
+            <div class="difficulty" id="difficulty">
+              <button type="button" data-level="easy" data-hint="FEWER TILES, MORE TIME">EASY</button>
+              <button type="button" data-level="medium" data-hint="THE CLASSIC GROOVE" class="active">MEDIUM</button>
+              <button type="button" data-level="hard" data-hint="TIGHT TIMING, EVERY BEAT">HARD</button>
+            </div>
             <div class="list-title"><span>THE TRACK LIST</span><span>30 SEC PREVIEWS</span></div>
             <div id="track-list" class="track-list" aria-live="polite"><p class="list-message">Finding some good vibes...</p></div>
             <div class="list-title" id="history-title" hidden><span>PLAY HISTORY</span><span>TAP TO REPLAY</span></div>

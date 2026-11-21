@@ -1,32 +1,31 @@
-import { detectBeats, syntheticBeats } from './beats.js';
+import { detectBeats, syntheticBeats, applyDifficulty, DIFFICULTY } from './beats.js';
 
 const $ = selector => document.querySelector(selector);
 const elements = {
   stage: $('#stage'), tiles: $('#tiles'), overlay: $('#overlay'), kicker: $('#overlay-kicker'),
-  title: $('#overlay-title'), copy: $('#overlay-copy'), warmup: $('#warmup-button'),
+  title: $('#overlay-title'), copy: $('#overlay-copy'), action: $('#overlay-action'),
   score: $('#score'), lives: $('#lives'), status: $('#game-status'), stop: $('#stop-button'),
-  nowTitle: $('#now-title'), nowArtist: $('#now-artist'), feedback: $('#feedback'),
-  list: $('#track-list'), form: $('#search-form'), input: $('#search-input'),
-  historyList: $('#history-list'), historyTitle: $('#history-title')
+  nowTitle: $('#now-title'), nowArtist: $('#now-artist'), nowDifficulty: $('#now-difficulty'),
+  feedback: $('#feedback'), list: $('#track-list'), form: $('#search-form'), input: $('#search-input'),
+  historyList: $('#history-list'), historyTitle: $('#history-title'),
+  difficultyHint: $('#difficulty-hint')
 };
 const LEAD = 1.8;
-const WINDOW = 0.22;
+const KEYS = ['d', 'f', 'j', 'k'];
 let context;
 let round;
 let generation = 0;
 let searchController;
 let feedbackTimer;
+let lastTrack = null;
+let difficulty = 'medium';
+const activePointers = new Map();
 
-function showOverlay(kicker, title, copy, button = 'PLAY THE WARM-UP') {
+function showOverlay(kicker, title, copy, allowReplay = false) {
   elements.kicker.textContent = kicker;
   elements.title.textContent = title;
   elements.copy.textContent = copy;
-  elements.warmup.innerHTML = '';
-  elements.warmup.append(document.createTextNode(button + ' '));
-  const arrow = document.createElement('span');
-  arrow.textContent = '↗';
-  elements.warmup.append(arrow);
-  elements.warmup.hidden = false;
+  elements.action.hidden = !(allowReplay && lastTrack);
   elements.overlay.hidden = false;
 }
 
@@ -46,6 +45,8 @@ function clearRound() {
     }
     round = null;
   }
+  activePointers.clear();
+  document.body.classList.remove('playing');
   elements.tiles.replaceChildren();
   elements.stop.hidden = true;
 }
@@ -67,67 +68,103 @@ function notify(text) {
 
 function finish(won) {
   const { score, track } = round;
-  if (track && !track.practice) saveHistory(track, score);
+  if (track) saveHistory(track, score);
   clearRound();
   elements.status.textContent = won ? 'ROUND COMPLETE' : 'ROUND OVER';
-  showOverlay(won ? 'THAT WAS A WHOLE VIBE' : 'KEEP THAT HEAD UP', won ? 'Nice moves!' : 'One more time?', `You scored ${score} points. Pick another track or play it again.`, 'PLAY IT AGAIN');
+  showOverlay(won ? 'THAT WAS A WHOLE VIBE' : 'KEEP THAT HEAD UP', won ? 'Nice moves!' : 'One more time?',
+    `You scored ${score} points. Play the same song again or pick a new one.`, true);
+}
+
+function scoreBeat(beat, elapsed) {
+  beat.hit = true;
+  beat.holding = false;
+  beat.element?.remove();
+  const perfect = Math.abs(beat.time - elapsed) < 0.09;
+  round.score += Math.round((beat.hold ? 150 : perfect ? 100 : 50) * round.multiplier);
+  updateStats();
+  notify(beat.hold ? 'GREAT HOLD!' : perfect ? 'PERFECT!' : 'NICE!');
+}
+
+function missBeat(beat, message = 'MISS!') {
+  beat.missed = true;
+  beat.holding = false;
+  beat.element?.remove();
+  round.lives--;
+  updateStats();
+  notify(message);
+  if (!round.lives) finish(false);
+}
+
+function press(lane) {
+  if (!round) return;
+  const elapsed = round.clock();
+  const beat = round.beats.find(item => !item.hit && !item.missed && !item.holding &&
+    item.lane === lane && Math.abs(item.time - elapsed) <= round.window);
+  if (!beat) {
+    notify('WAIT FOR IT!');
+    return;
+  }
+  if (beat.hold) {
+    beat.holding = true;
+    beat.element?.classList.add('holding');
+    notify('HOLD!');
+    return;
+  }
+  scoreBeat(beat, elapsed);
+}
+
+function release(lane) {
+  if (!round) return;
+  const beat = round.beats.find(item => item.holding && item.lane === lane);
+  if (!beat) return;
+  const elapsed = round.clock();
+  if (elapsed >= beat.time + beat.hold - 0.12) scoreBeat(beat, elapsed);
+  else missBeat(beat, 'TOO SHORT!');
 }
 
 function tick() {
   if (!round) return;
   const elapsed = round.clock();
+  const hitY = elements.stage.clientHeight - 70;
   for (const beat of round.beats) {
-    if (!beat.hit && !beat.missed && elapsed > beat.time + WINDOW) {
-      beat.missed = true;
-      beat.element?.remove();
-      round.lives--;
-      updateStats();
-      notify('MISS!');
-      if (!round.lives) return finish(false);
+    if (beat.holding && elapsed >= beat.time + beat.hold) scoreBeat(beat, elapsed);
+    if (!beat.hit && !beat.missed && !beat.holding && elapsed > beat.time + round.window) {
+      missBeat(beat);
+      if (!round) return;
     }
     if (beat.hit || beat.missed) continue;
     const remaining = beat.time - elapsed;
-    if (remaining <= LEAD && remaining >= -WINDOW) {
+    if (remaining <= LEAD && remaining >= -round.window - (beat.hold || 0)) {
       if (!beat.element) {
         beat.element = document.createElement('div');
-        beat.element.className = `tile tile-${beat.lane}`;
-        beat.element.textContent = '♫';
+        beat.element.className = `tile tile-${beat.lane}${beat.hold ? ' tile-hold' : ''}`;
+        beat.element.textContent = beat.hold ? '♪ HOLD' : '♫';
+        beat.height = 60 + (beat.hold || 0) * (hitY / LEAD);
+        beat.element.style.height = `${beat.height}px`;
         elements.tiles.append(beat.element);
       }
-      const hitY = elements.stage.clientHeight - 70;
-      beat.element.style.top = `${hitY - remaining / LEAD * hitY - 30}px`;
+      beat.element.style.top = `${hitY - remaining / LEAD * hitY - beat.height / 2}px`;
     }
   }
+  if (!round) return;
   if (elapsed >= round.duration) return finish(true);
   round.frame = requestAnimationFrame(tick);
-}
-
-function tap(lane) {
-  if (!round) return;
-  const elapsed = round.clock();
-  const beat = round.beats.find(item => !item.hit && !item.missed && item.lane === lane && Math.abs(item.time - elapsed) <= WINDOW);
-  if (!beat) {
-    notify('WAIT FOR IT!');
-    return;
-  }
-  beat.hit = true;
-  beat.element?.remove();
-  round.score += Math.abs(beat.time - elapsed) < 0.09 ? 100 : 50;
-  updateStats();
-  notify(Math.abs(beat.time - elapsed) < 0.09 ? 'PERFECT!' : 'NICE!');
 }
 
 async function startTrack(track) {
   clearRound();
   const current = generation;
+  lastTrack = track;
+  const cfg = DIFFICULTY[difficulty];
   elements.nowTitle.textContent = track.title;
   elements.nowArtist.textContent = track.artist;
+  elements.nowDifficulty.textContent = cfg.label;
+  elements.nowDifficulty.hidden = false;
   elements.score.textContent = '0000';
   elements.lives.textContent = '♥ ♥ ♥';
   elements.lives.setAttribute('aria-label', '3 lives remaining');
   elements.status.textContent = 'GETTING THE BEAT READY';
   showOverlay('HANG TIGHT', 'Finding the beat...', 'Getting your track ready to play.');
-  elements.warmup.hidden = true;
   elements.stop.hidden = false;
   try {
     context ||= new (window.AudioContext || window.webkitAudioContext)();
@@ -141,6 +178,7 @@ async function startTrack(track) {
       // If a preview has no clear transients, fall back to a steady grid so it still plays.
       beats = detectBeats(buffer);
       if (!beats.length) beats = syntheticBeats(buffer.duration);
+      beats = applyDifficulty(beats, difficulty);
       duration = buffer.duration;
       source = context.createBufferSource();
       source.buffer = buffer;
@@ -149,34 +187,31 @@ async function startTrack(track) {
       clock = () => context.currentTime - start;
       source.start(start);
     };
-    if (track.practice) {
-      startBuffer(makePractice(context));
-    } else {
-      const audioUrl = `/api/audio?url=${encodeURIComponent(track.preview)}`;
-      const response = await fetch(audioUrl);
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Could not load this preview.');
-      }
-      try {
-        startBuffer(await context.decodeAudioData(await response.arrayBuffer()));
-      } catch (decodeError) {
-        // Some browsers cannot decode AAC previews with Web Audio. Play the file
-        // through a media element instead and keep a steady beat grid.
-        console.warn('Preview decode failed, using direct playback:', decodeError);
-        element = new Audio(audioUrl);
-        await element.play();
-        duration = Number.isFinite(element.duration) ? element.duration : 30;
-        beats = syntheticBeats(duration);
-        clock = () => element.currentTime;
-      }
+    const audioUrl = `/api/audio?url=${encodeURIComponent(track.preview)}`;
+    const response = await fetch(audioUrl);
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Could not load this preview.');
+    }
+    try {
+      startBuffer(await context.decodeAudioData(await response.arrayBuffer()));
+    } catch (decodeError) {
+      // Some browsers cannot decode AAC previews with Web Audio. Play the file
+      // through a media element instead and keep a steady beat grid.
+      console.warn('Preview decode failed, using direct playback:', decodeError);
+      element = new Audio(audioUrl);
+      await element.play();
+      duration = Number.isFinite(element.duration) ? element.duration : 30;
+      beats = applyDifficulty(syntheticBeats(duration), difficulty);
+      clock = () => element.currentTime;
     }
     if (current !== generation) {
       if (source) try { source.stop(); } catch { /* already stopped */ }
       if (element) element.pause();
       return;
     }
-    round = { source, element, track, duration, beats, clock, score: 0, lives: 3, frame: 0 };
+    round = { source, element, track, duration, beats, clock, score: 0, lives: 3, frame: 0, window: cfg.window, multiplier: cfg.score };
+    document.body.classList.add('playing');
     elements.overlay.hidden = true;
     elements.status.textContent = 'FEEL THE BEAT';
     tick();
@@ -185,27 +220,8 @@ async function startTrack(track) {
     console.error('Unable to start track:', error);
     clearRound();
     elements.status.textContent = 'READY WHEN YOU ARE';
-    showOverlay('OOPS, WRONG NOTE', 'Let’s try that again.', error.message || 'This track could not be played. Try another one.');
+    showOverlay('OOPS, WRONG NOTE', 'Let’s try that again.', error.message || 'This track could not be played. Try another one.', true);
   }
-}
-
-function makePractice(audioContext) {
-  const rate = audioContext.sampleRate;
-  const duration = 22;
-  const buffer = audioContext.createBuffer(1, rate * duration, rate);
-  const samples = buffer.getChannelData(0);
-  const notes = [110, 130.81, 146.83, 164.81, 146.83, 130.81, 110, 98];
-  for (let i = 0; i < samples.length; i++) {
-    const time = i / rate;
-    const beat = Math.floor(time / 0.5);
-    const phase = time % 0.5;
-    const kick = Math.sin(2 * Math.PI * (65 * phase - 35 * phase * phase)) * Math.exp(-phase * 20) * 0.65;
-    const bass = Math.sin(2 * Math.PI * notes[beat % notes.length] * phase) * Math.exp(-phase * 5) * 0.22;
-    const offbeat = (time + 0.25) % 0.5;
-    const hat = Math.sin(2 * Math.PI * 5200 * time) * Math.exp(-offbeat * 80) * 0.08;
-    samples[i] = kick + bass + hat;
-  }
-  return buffer;
 }
 
 function mapTrack(track) {
@@ -251,35 +267,53 @@ function saveHistory(track, score) {
   }
 }
 
+function trackButton(entry, { number, badge, label, icon }) {
+  const button = document.createElement('button');
+  button.className = 'track';
+  button.setAttribute('aria-label', label);
+  const art = document.createElement('img');
+  art.src = entry.artwork || '/icons/icon-192.png';
+  art.alt = '';
+  art.loading = 'lazy';
+  const info = document.createElement('span');
+  info.className = 'track-info';
+  const title = document.createElement('strong');
+  title.textContent = entry.title;
+  const artist = document.createElement('small');
+  artist.textContent = entry.artist;
+  info.append(title, artist);
+  const play = document.createElement('span');
+  play.className = 'track-play';
+  play.textContent = icon;
+  if (number) {
+    const numberEl = document.createElement('span');
+    numberEl.className = 'track-number';
+    numberEl.textContent = number;
+    button.append(numberEl);
+  }
+  if (badge) {
+    const badgeEl = document.createElement('span');
+    badgeEl.className = 'history-score';
+    badgeEl.textContent = badge;
+    button.append(art, info, badgeEl, play);
+  } else {
+    button.append(art, info, play);
+  }
+  button.addEventListener('click', () => startTrack(entry));
+  return button;
+}
+
 function renderHistory() {
   let history = [];
   try { history = JSON.parse(localStorage.getItem('mnc-history') || '[]'); } catch { return; }
   elements.historyTitle.hidden = !history.length;
   elements.historyList.replaceChildren();
   history.forEach(entry => {
-    const button = document.createElement('button');
-    button.className = 'track';
-    button.setAttribute('aria-label', `Replay ${entry.title} by ${entry.artist}`);
-    const art = document.createElement('img');
-    art.src = entry.artwork || '/icons/icon-192.png';
-    art.alt = '';
-    art.loading = 'lazy';
-    const info = document.createElement('span');
-    info.className = 'track-info';
-    const title = document.createElement('strong');
-    title.textContent = entry.title;
-    const artist = document.createElement('small');
-    artist.textContent = entry.artist;
-    info.append(title, artist);
-    const score = document.createElement('span');
-    score.className = 'history-score';
-    score.textContent = String(entry.score).padStart(4, '0');
-    const replay = document.createElement('span');
-    replay.className = 'track-play';
-    replay.textContent = '↻';
-    button.append(art, info, score, replay);
-    button.addEventListener('click', () => startTrack(entry));
-    elements.historyList.append(button);
+    elements.historyList.append(trackButton(entry, {
+      badge: String(entry.score).padStart(4, '0'),
+      label: `Replay ${entry.title} by ${entry.artist}`,
+      icon: '↻'
+    }));
   });
 }
 
@@ -296,29 +330,11 @@ async function search(term) {
       return;
     }
     tracks.forEach((track, index) => {
-      const button = document.createElement('button');
-      button.className = 'track';
-      button.setAttribute('aria-label', `Play ${track.title} by ${track.artist}`);
-      const art = document.createElement('img');
-      art.src = track.artwork || '/icons/icon-192.png';
-      art.alt = '';
-      art.loading = 'lazy';
-      const info = document.createElement('span');
-      info.className = 'track-info';
-      const title = document.createElement('strong');
-      title.textContent = track.title;
-      const artist = document.createElement('small');
-      artist.textContent = track.artist;
-      info.append(title, artist);
-      const play = document.createElement('span');
-      play.className = 'track-play';
-      play.textContent = '▶';
-      const number = document.createElement('span');
-      number.className = 'track-number';
-      number.textContent = String(index + 1).padStart(2, '0');
-      button.append(number, art, info, play);
-      button.addEventListener('click', () => startTrack(track));
-      elements.list.append(button);
+      elements.list.append(trackButton(track, {
+        number: String(index + 1).padStart(2, '0'),
+        label: `Play ${track.title} by ${track.artist}`,
+        icon: '▶'
+      }));
     });
   } catch (error) {
     if (error.name === 'AbortError') return;
@@ -332,28 +348,50 @@ elements.form.addEventListener('submit', event => {
   const term = elements.input.value.trim();
   if (term) search(term);
 });
-elements.warmup.addEventListener('click', () => startTrack({ title: 'The Warm-Up Groove', artist: 'MusicNoteClick', practice: true }));
+elements.action.addEventListener('click', () => {
+  if (lastTrack) startTrack(lastTrack);
+});
 elements.stop.addEventListener('click', () => {
   clearRound();
   elements.status.textContent = 'READY WHEN YOU ARE';
-  showOverlay('READY FOR ANOTHER?', 'Your beat is waiting.', 'Choose a song, or warm up with our house beat.');
+  showOverlay('READY FOR ANOTHER?', 'Your beat is waiting.', 'Pick a song from the track list, or replay your last one.', true);
+});
+document.querySelectorAll('#difficulty button').forEach(button => {
+  button.addEventListener('click', () => {
+    difficulty = button.dataset.level;
+    document.querySelectorAll('#difficulty button').forEach(item => item.classList.toggle('active', item === button));
+    elements.difficultyHint.textContent = button.dataset.hint;
+  });
 });
 elements.stage.addEventListener('pointerdown', event => {
   if (!round) return;
   const rect = elements.stage.getBoundingClientRect();
   const lane = Math.max(0, Math.min(3, Math.floor((event.clientX - rect.left) / rect.width * 4)));
-  tap(lane);
+  activePointers.set(event.pointerId, lane);
+  press(lane);
 });
+for (const type of ['pointerup', 'pointercancel']) {
+  elements.stage.addEventListener(type, event => {
+    const lane = activePointers.get(event.pointerId);
+    if (lane === undefined) return;
+    activePointers.delete(event.pointerId);
+    release(lane);
+  });
+}
 window.addEventListener('keydown', event => {
   if (event.repeat || event.target.matches('input, textarea, button')) return;
-  const lane = ['d', 'f', 'j', 'k'].indexOf(event.key.toLowerCase());
-  if (lane !== -1) { event.preventDefault(); tap(lane); }
+  const lane = KEYS.indexOf(event.key.toLowerCase());
+  if (lane !== -1) { event.preventDefault(); press(lane); }
+});
+window.addEventListener('keyup', event => {
+  const lane = KEYS.indexOf(event.key.toLowerCase());
+  if (lane !== -1) release(lane);
 });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && round) {
     clearRound();
     elements.status.textContent = 'ROUND ENDED';
-    showOverlay('WELCOME BACK', 'Ready to groove?', 'Your round ended while the app was away. Pick a track to play again.');
+    showOverlay('WELCOME BACK', 'Ready to groove?', 'Your round ended while the app was away. Pick a track to play again.', true);
   }
 });
 renderHistory();
