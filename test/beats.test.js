@@ -44,6 +44,14 @@ test('applyDifficulty thins beats, marks hold tiles, and tightens windows per le
   assert.ok(DIFFICULTY.hard.score > DIFFICULTY.easy.score);
 });
 
+test('applyDifficulty can disable hold tiles while keeping the beat grid', () => {
+  const base = Array.from({ length: 12 }, (_, i) => ({ time: 2 + i * 0.5, lane: i % 4, hit: false }));
+  const noHolds = applyDifficulty(base, 'hard', false);
+  assert.equal(noHolds.length, 12);
+  assert.ok(noHolds.every(beat => beat.hold === 0));
+  assert.ok(applyDifficulty(base, 'hard', true).some(beat => beat.hold > 0));
+});
+
 test('only allows HTTPS previews on the exact Apple audio host', () => {
   assert.equal(allowedPreview('https://audio-ssl.itunes.apple.com/itunes-assets/example.m4a'), true);
   for (const url of ['http://audio-ssl.itunes.apple.com/a', 'https://audio-ssl.itunes.apple.com.evil.test/a', 'https://evil.test/a', 'https://user@audio-ssl.itunes.apple.com/a', 'https://audio-ssl.itunes.apple.com:444/a', 'not-a-url']) {

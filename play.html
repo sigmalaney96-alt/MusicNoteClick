@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#161025">
+    <meta name="apple-mobile-web-app-title" content="MNC">
     <meta name="description" content="Tap into your favorite tracks with MusicNoteClick, a colorful music rhythm game.">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
@@ -15,7 +16,7 @@
     <div class="app-shell">
       <header class="topbar">
         <a class="brand" href="/" aria-label="MusicNoteClick home">
-          <span class="brand-icon">♪</span><span>MusicNote<span>Click</span><small>FIND YOUR RHYTHM</small></span>
+          <img class="brand-icon" src="/icons/icon.svg" alt="" width="42" height="42"><span>MusicNote<span>Click</span><small>FIND YOUR RHYTHM</small></span>
         </a>
         <div class="top-right"><button class="install-button" id="install-button" hidden>INSTALL ♪</button><span class="live-dot"></span> YOUR DAILY DOSE OF RHYTHM <span class="sparkle">✳</span></div>
       </header>
@@ -42,7 +43,10 @@
           <section class="game-card" aria-label="Rhythm game">
             <div class="game-top">
               <div><span class="tiny-label">NOW PLAYING</span><strong id="now-title">Pick your track</strong><span id="now-artist">Your next favorite is waiting →</span><span id="now-difficulty" class="difficulty-badge" hidden></span></div>
-              <div class="game-stats"><div><span>SCORE</span><strong id="score">0000</strong></div><div><span>LIVES</span><strong id="lives" aria-label="3 lives remaining">♥ ♥ ♥</strong></div></div>
+              <div class="game-side">
+                <label class="hold-toggle" for="hold-toggle"><span>HOLD TILES</span><input type="checkbox" id="hold-toggle" checked><i aria-hidden="true"></i></label>
+                <div class="game-stats"><div><span>SCORE</span><strong id="score">0000</strong></div><div><span>LIVES</span><strong id="lives" aria-label="3 lives remaining">♥ ♥ ♥</strong></div></div>
+              </div>
             </div>
             <div class="stage" id="stage">
               <div class="lane-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -81,7 +85,7 @@
             <div class="library-footer"><span>✦</span><p>Music previews provided by <strong>iTunes.</strong><br>New discoveries are just a tap away.</p></div>
           </aside>
         </div>
-        <div class="how-to"><span class="how-number">01</span><div><strong>CHOOSE YOUR JAM</strong><small>Find a song that moves you.</small></div><span class="how-arrow">↗</span><span class="how-number">02</span><div><strong>FOLLOW THE BEAT</strong><small>Tap when tiles reach the line.</small></div><span class="how-arrow">↗</span><span class="how-number">03</span><div><strong>KEEP THE VIBE ALIVE</strong><small>Miss three and it's a wrap.</small></div></div>
+        <div class="how-to"><span class="how-number">01</span><div><strong>CHOOSE YOUR JAM</strong><small>Find a song that moves you.</small></div><span class="how-arrow">↗</span><span class="how-number">02</span><div><strong>FOLLOW THE BEAT</strong><small>Tap a tile's lane whenever you're ready.</small></div><span class="how-arrow">↗</span><span class="how-number">03</span><div><strong>KEEP THE VIBE ALIVE</strong><small>Miss three and it's a wrap.</small></div></div>
       </main>
       <footer><span>MusicNoteClick <b>✳</b></span><span>MADE TO MOVE YOU. © 2026</span><span>GOOD VIBES ONLY ♡</span></footer>
     </div>

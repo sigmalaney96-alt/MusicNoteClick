@@ -46,11 +46,11 @@ export const DIFFICULTY = {
   hard: { every: 1, window: 0.15, holdEvery: 3, hold: 0.6, score: 2, label: 'HARD' }
 };
 
-export function applyDifficulty(beats, level = 'medium') {
+export function applyDifficulty(beats, level = 'medium', holds = true) {
   const cfg = DIFFICULTY[level] || DIFFICULTY.medium;
   return beats
     .filter((_, index) => index % cfg.every === 0)
-    .map((beat, index) => ({ ...beat, hold: (index + 1) % cfg.holdEvery === 0 ? cfg.hold : 0, hit: false }));
+    .map((beat, index) => ({ ...beat, hold: holds && (index + 1) % cfg.holdEvery === 0 ? cfg.hold : 0, hit: false }));
 }
 
 function laneFor(index) {

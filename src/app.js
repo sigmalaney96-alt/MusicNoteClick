@@ -8,7 +8,7 @@ const elements = {
   nowTitle: $('#now-title'), nowArtist: $('#now-artist'), nowDifficulty: $('#now-difficulty'),
   feedback: $('#feedback'), list: $('#track-list'), form: $('#search-form'), input: $('#search-input'),
   historyList: $('#history-list'), historyTitle: $('#history-title'),
-  difficultyHint: $('#difficulty-hint')
+  difficultyHint: $('#difficulty-hint'), holdToggle: $('#hold-toggle')
 };
 const LEAD = 1.8;
 const KEYS = ['d', 'f', 'j', 'k'];
@@ -19,6 +19,8 @@ let searchController;
 let feedbackTimer;
 let lastTrack = null;
 let difficulty = 'medium';
+let holdTiles = true;
+try { holdTiles = localStorage.getItem('mnc-holds') !== '0'; } catch { holdTiles = true; }
 const activePointers = new Map();
 
 function showOverlay(kicker, title, copy, allowReplay = false) {
@@ -98,8 +100,11 @@ function missBeat(beat, message = 'MISS!') {
 function press(lane) {
   if (!round) return;
   const elapsed = round.clock();
-  const beat = round.beats.find(item => !item.hit && !item.missed && !item.holding &&
-    item.lane === lane && Math.abs(item.time - elapsed) <= round.window);
+  // Tapping a lane hits its nearest on-screen tile — no need to wait for the line.
+  const beat = round.beats
+    .filter(item => !item.hit && !item.missed && !item.holding && item.lane === lane &&
+      item.time - elapsed <= LEAD)
+    .sort((a, b) => Math.abs(a.time - elapsed) - Math.abs(b.time - elapsed))[0];
   if (!beat) {
     notify('WAIT FOR IT!');
     return;
@@ -178,7 +183,7 @@ async function startTrack(track) {
       // If a preview has no clear transients, fall back to a steady grid so it still plays.
       beats = detectBeats(buffer);
       if (!beats.length) beats = syntheticBeats(buffer.duration);
-      beats = applyDifficulty(beats, difficulty);
+      beats = applyDifficulty(beats, difficulty, holdTiles);
       duration = buffer.duration;
       source = context.createBufferSource();
       source.buffer = buffer;
@@ -202,7 +207,7 @@ async function startTrack(track) {
       element = new Audio(audioUrl);
       await element.play();
       duration = Number.isFinite(element.duration) ? element.duration : 30;
-      beats = applyDifficulty(syntheticBeats(duration), difficulty);
+      beats = applyDifficulty(syntheticBeats(duration), difficulty, holdTiles);
       clock = () => element.currentTime;
     }
     if (current !== generation) {
@@ -362,6 +367,12 @@ document.querySelectorAll('#difficulty button').forEach(button => {
     document.querySelectorAll('#difficulty button').forEach(item => item.classList.toggle('active', item === button));
     elements.difficultyHint.textContent = button.dataset.hint;
   });
+});
+elements.holdToggle.checked = holdTiles;
+elements.holdToggle.addEventListener('change', () => {
+  holdTiles = elements.holdToggle.checked;
+  try { localStorage.setItem('mnc-holds', holdTiles ? '1' : '0'); } catch { /* storage unavailable */ }
+  notify(holdTiles ? 'HOLD TILES ON!' : 'HOLD TILES OFF!');
 });
 elements.stage.addEventListener('pointerdown', event => {
   if (!round) return;

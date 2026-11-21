@@ -1,7 +1,7 @@
 {
-  "name": "MusicNoteClick",
-  "short_name": "NoteClick",
-  "description": "Find your rhythm with a colorful music tapping game.",
+  "name": "MNC",
+  "short_name": "MNC",
+  "description": "MNC (MusicNoteClick) — find your rhythm with a colorful music tapping game.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
