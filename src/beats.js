@@ -14,7 +14,7 @@ export function detectBeats(buffer) {
     const baseline = energies.slice(Math.max(0, i - 12), i).reduce((a, b) => a + b, 0) / Math.min(i, 12);
     const strength = energies[i] - baseline;
     const time = i * windowSize / rate;
-    if (time >= 1.8 && time < buffer.duration - 0.15 && strength > 0.008 &&
+    if (time >= 1.8 && time < buffer.duration - 0.15 && strength > 0.006 &&
         energies[i] > baseline * 1.25 && energies[i] >= energies[i - 1] && energies[i] > energies[i + 1]) {
       candidates.push({ time, strength });
     }
@@ -22,7 +22,7 @@ export function detectBeats(buffer) {
   const selected = [];
   for (const candidate of candidates) {
     const previous = selected[selected.length - 1];
-    if (previous && candidate.time - previous.time < 0.3) {
+    if (previous && candidate.time - previous.time < 0.22) {
       if (candidate.strength > previous.strength) selected[selected.length - 1] = candidate;
     } else selected.push(candidate);
   }
@@ -30,7 +30,7 @@ export function detectBeats(buffer) {
 }
 
 // Fallback grid for previews the browser cannot decode — keeps every song playable.
-export function syntheticBeats(duration, spacing = 0.35) {
+export function syntheticBeats(duration, spacing = 0.25) {
   const beats = [];
   for (let time = 2, index = 0; time < duration - 0.3; time += spacing, index++) {
     beats.push({ time, lane: laneFor(index), hit: false });
@@ -42,7 +42,7 @@ export function syntheticBeats(duration, spacing = 0.35) {
 // with a tight window and more hold tiles. Score multiplies with difficulty.
 export const DIFFICULTY = {
   easy: { every: 3, window: 0.3, holdEvery: 4, hold: 0.4, score: 1, label: 'EASY' },
-  medium: { every: 2, window: 0.22, holdEvery: 4, hold: 0.5, score: 1.5, label: 'MEDIUM' },
+  medium: { every: 1, window: 0.22, holdEvery: 5, hold: 0.5, score: 1.5, label: 'MEDIUM' },
   hard: { every: 1, window: 0.15, holdEvery: 3, hold: 0.6, score: 2, label: 'HARD' }
 };
 

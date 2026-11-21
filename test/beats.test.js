@@ -30,13 +30,13 @@ test('syntheticBeats builds an even playable grid for undecodable previews', () 
   assert.ok(beats.every(beat => beat.lane >= 0 && beat.lane < 4));
 });
 
-test('applyDifficulty thins beats, marks hold tiles, and tightens windows per level', () => {
+test('applyDifficulty increases medium tile density, marks hold tiles, and tightens windows per level', () => {
   const base = Array.from({ length: 12 }, (_, i) => ({ time: 2 + i * 0.5, lane: i % 4, hit: false }));
   const easy = applyDifficulty(base, 'easy');
   const medium = applyDifficulty(base, 'medium');
   const hard = applyDifficulty(base, 'hard');
   assert.equal(easy.length, 4);
-  assert.equal(medium.length, 6);
+  assert.equal(medium.length, 12);
   assert.equal(hard.length, 12);
   for (const beats of [easy, medium, hard]) assert.ok(beats.some(beat => beat.hold > 0));
   assert.ok(DIFFICULTY.hard.window < DIFFICULTY.medium.window);

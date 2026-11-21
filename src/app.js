@@ -8,9 +8,11 @@ const elements = {
   nowTitle: $('#now-title'), nowArtist: $('#now-artist'), nowDifficulty: $('#now-difficulty'),
   feedback: $('#feedback'), list: $('#track-list'), form: $('#search-form'), input: $('#search-input'),
   historyList: $('#history-list'), historyTitle: $('#history-title'),
-  difficultyHint: $('#difficulty-hint'), holdToggle: $('#hold-toggle')
+  difficultyHint: $('#difficulty-hint'), holdToggle: $('#hold-toggle'),
+  winResult: $('#win-result'), winArtwork: $('#win-artwork'), winTrack: $('#win-track'),
+  winArtist: $('#win-artist'), winScore: $('#win-score'), continue: $('#continue-button')
 };
-const LEAD = 1.8;
+const LEAD = 1.35;
 const KEYS = ['d', 'f', 'j', 'k'];
 let context;
 let round;
@@ -73,8 +75,18 @@ function finish(won) {
   if (track) saveHistory(track, score);
   clearRound();
   elements.status.textContent = won ? 'ROUND COMPLETE' : 'ROUND OVER';
-  showOverlay(won ? 'THAT WAS A WHOLE VIBE' : 'KEEP THAT HEAD UP', won ? 'Nice moves!' : 'One more time?',
-    `You scored ${score} points. Play the same song again or pick a new one.`, true);
+  elements.winResult.hidden = !won;
+  elements.continue.hidden = !won;
+  elements.action.hidden = won || !lastTrack;
+  if (won && track) {
+    elements.winArtwork.src = track.artwork || '/icons/icon-192.png';
+    elements.winTrack.textContent = track.title;
+    elements.winArtist.textContent = track.artist;
+    elements.winScore.textContent = String(score).padStart(4, '0');
+  }
+  showOverlay(won ? 'THAT WAS A WHOLE VIBE' : 'KEEP THAT HEAD UP', won ? 'You did it!' : 'One more time?',
+    won ? 'You made it to the end of the song.' : `You scored ${score} points. Play the same song again or pick a new one.`, !won);
+  elements.continue.hidden = !won;
 }
 
 function scoreBeat(beat, elapsed) {
@@ -106,7 +118,10 @@ function press(lane) {
       item.time - elapsed <= LEAD)
     .sort((a, b) => Math.abs(a.time - elapsed) - Math.abs(b.time - elapsed))[0];
   if (!beat) {
-    notify('WAIT FOR IT!');
+    round.lives--;
+    updateStats();
+    notify('EMPTY LANE!');
+    if (!round.lives) finish(false);
     return;
   }
   if (beat.hold) {
@@ -169,6 +184,8 @@ async function startTrack(track) {
   elements.lives.textContent = '♥ ♥ ♥';
   elements.lives.setAttribute('aria-label', '3 lives remaining');
   elements.status.textContent = 'GETTING THE BEAT READY';
+  elements.winResult.hidden = true;
+  elements.continue.hidden = true;
   showOverlay('HANG TIGHT', 'Finding the beat...', 'Getting your track ready to play.');
   elements.stop.hidden = false;
   try {
@@ -355,6 +372,12 @@ elements.form.addEventListener('submit', event => {
 });
 elements.action.addEventListener('click', () => {
   if (lastTrack) startTrack(lastTrack);
+});
+elements.continue.addEventListener('click', () => {
+  elements.overlay.hidden = true;
+  elements.winResult.hidden = true;
+  elements.continue.hidden = true;
+  elements.status.textContent = 'READY WHEN YOU ARE';
 });
 elements.stop.addEventListener('click', () => {
   clearRound();
