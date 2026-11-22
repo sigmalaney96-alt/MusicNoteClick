@@ -7,21 +7,28 @@ const elements = {
   score: $('#score'), lives: $('#lives'), status: $('#game-status'), stop: $('#stop-button'),
   nowTitle: $('#now-title'), nowArtist: $('#now-artist'), nowDifficulty: $('#now-difficulty'),
   feedback: $('#feedback'), list: $('#track-list'), form: $('#search-form'), input: $('#search-input'),
-  historyList: $('#history-list'), historyTitle: $('#history-title'),
+  historyList: $('#history-list'),
   difficultyHint: $('#difficulty-hint'), holdToggle: $('#hold-toggle'),
   winResult: $('#win-result'), winArtwork: $('#win-artwork'), winTrack: $('#win-track'),
   winArtist: $('#win-artist'), winScore: $('#win-score'), lossResult: $('#loss-result'),
-  lossScore: $('#loss-score'), continue: $('#continue-button')
+  lossScore: $('#loss-score'), continue: $('#continue-button'), overallScore: $('#overall-score')
 };
 const EMOJI_IMAGES = { '🐻': '/icons/emoji-bear.svg', '🐶': '/icons/emoji-dog.svg', '🐱': '/icons/emoji-cat.svg', '🐸': '/icons/emoji-frog.svg' };
-const DEFAULT_PREFERENCES = { speed: 'normal', theme: 'jazz', emoji: '♫' };
+const DEFAULT_CUSTOM_COLORS = Object.freeze({ primary: '#4a3671', accent: '#ff9dc7', third: '#a8dcff' });
+const DEFAULT_PREFERENCES = { speed: 'normal', theme: 'jazz', emoji: '♫', customColors: { ...DEFAULT_CUSTOM_COLORS } };
+const isValidColor = value => typeof value === 'string' && /^#[\da-f]{6}$/i.test(value);
 let preferences = { ...DEFAULT_PREFERENCES };
 try {
   const savedPreferences = JSON.parse(localStorage.getItem('mnc-settings') || '{}');
   preferences = {
     speed: TILE_SPEEDS[savedPreferences.speed] ? savedPreferences.speed : DEFAULT_PREFERENCES.speed,
-    theme: ['jazz', 'caffeinated', 'ocean', 'ember', 'earth', 'cotton-candy'].includes(savedPreferences.theme) ? savedPreferences.theme : DEFAULT_PREFERENCES.theme,
-    emoji: ['♫', '🐻', '🐶', '🐱', '🐸'].includes(savedPreferences.emoji) ? savedPreferences.emoji : DEFAULT_PREFERENCES.emoji
+    theme: ['jazz', 'caffeinated', 'ocean', 'ember', 'earth', 'cotton-candy', 'custom'].includes(savedPreferences.theme) ? savedPreferences.theme : DEFAULT_PREFERENCES.theme,
+    emoji: ['♫', '🐻', '🐶', '🐱', '🐸', '🍿', '🍓', '🐯', '🦄', '🍕'].includes(savedPreferences.emoji) ? savedPreferences.emoji : DEFAULT_PREFERENCES.emoji,
+    customColors: {
+      primary: isValidColor(savedPreferences.customColors?.primary) ? savedPreferences.customColors.primary : DEFAULT_CUSTOM_COLORS.primary,
+      accent: isValidColor(savedPreferences.customColors?.accent) ? savedPreferences.customColors.accent : DEFAULT_CUSTOM_COLORS.accent,
+      third: isValidColor(savedPreferences.customColors?.third) ? savedPreferences.customColors.third : DEFAULT_CUSTOM_COLORS.third
+    }
   };
 } catch { preferences = { ...DEFAULT_PREFERENCES }; }
 const KEYS = ['d', 'f', 'j', 'k'];
@@ -35,6 +42,7 @@ let difficulty = 'medium';
 let holdTiles = true;
 try { holdTiles = localStorage.getItem('mnc-holds') !== '0'; } catch { holdTiles = true; }
 const activePointers = new Map();
+let overallScore = 0;
 
 function showOverlay(kicker, title, copy, allowReplay = false) {
   elements.kicker.textContent = kicker;
@@ -70,6 +78,10 @@ function updateStats() {
   elements.score.textContent = String(round.score).padStart(4, '0');
   elements.lives.textContent = '♥ '.repeat(round.lives).trim() + ' ♡'.repeat(3 - round.lives);
   elements.lives.setAttribute('aria-label', `${round.lives} lives remaining`);
+}
+
+function updateOverallScore() {
+  elements.overallScore.textContent = String(overallScore).padStart(6, '0');
 }
 
 function notify(text) {
@@ -109,8 +121,11 @@ function scoreBeat(beat, elapsed) {
   beat.holding = false;
   beat.element?.remove();
   const perfect = Math.abs(beat.time - elapsed) < 0.09;
-  round.score += Math.round((beat.hold ? 150 : perfect ? 100 : 50) * round.multiplier);
+  const points = Math.round((beat.hold ? 150 : perfect ? 100 : 50) * round.multiplier);
+  round.score += points;
+  overallScore += points;
   updateStats();
+  updateOverallScore();
   notify(beat.hold ? 'GREAT HOLD!' : perfect ? 'PERFECT!' : 'NICE!');
 }
 
@@ -379,8 +394,14 @@ function trackButton(entry, { number, badge, label, icon }) {
 function renderHistory() {
   let history = [];
   try { history = JSON.parse(localStorage.getItem('mnc-history') || '[]'); } catch { return; }
-  elements.historyTitle.hidden = !history.length;
   elements.historyList.replaceChildren();
+  if (!history.length) {
+    const emptyMessage = document.createElement('p');
+    emptyMessage.className = 'list-message';
+    emptyMessage.textContent = 'No plays yet. Your recent songs will show up here.';
+    elements.historyList.append(emptyMessage);
+    return;
+  }
   history.forEach(entry => {
     elements.historyList.append(trackButton(entry, {
       badge: String(entry.score).padStart(4, '0'),
@@ -416,6 +437,33 @@ async function search(term) {
   }
 }
 
+const libraryTabs = [$('#search-tab'), $('#history-tab')];
+const libraryPanels = [$('#search-panel'), $('#history-panel')];
+function activateLibraryTab(index, focus = false) {
+  libraryTabs.forEach((tab, tabIndex) => {
+    const selected = tabIndex === index;
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    libraryPanels[tabIndex].hidden = !selected;
+  });
+  if (focus) libraryTabs[index].focus();
+}
+libraryTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => activateLibraryTab(index));
+  tab.addEventListener('keydown', event => {
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      activateLibraryTab((index + 1) % libraryTabs.length, true);
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      activateLibraryTab((index + libraryTabs.length - 1) % libraryTabs.length, true);
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      activateLibraryTab(event.key === 'Home' ? 0 : libraryTabs.length - 1, true);
+    }
+  });
+});
+
 elements.form.addEventListener('submit', event => {
   event.preventDefault();
   const term = elements.input.value.trim();
@@ -448,11 +496,23 @@ document.querySelectorAll('#difficulty button').forEach(button => {
 const settingsScreen = $('#settings-screen');
 const settingsTrigger = $('#settings-trigger');
 const settingGroups = [...document.querySelectorAll('[data-setting]')];
-let draftPreferences = { ...preferences };
+const customThemeControls = $('#custom-theme-controls');
+const customColorInputs = [...document.querySelectorAll('[data-custom-color]')];
+let draftPreferences = { ...preferences, customColors: { ...preferences.customColors } };
+function applyTheme(values = preferences) {
+  document.body.dataset.theme = values.theme;
+  Object.entries(values.customColors || DEFAULT_CUSTOM_COLORS).forEach(([name, color]) => {
+    document.body.style.setProperty(`--custom-${name}`, color);
+  });
+}
 function renderSettings(values) {
   settingGroups.forEach(group => group.querySelectorAll('button').forEach(button => {
     button.setAttribute('aria-pressed', String(button.dataset.value === values[group.dataset.setting]));
   }));
+  customThemeControls.hidden = values.theme !== 'custom';
+  customColorInputs.forEach(input => {
+    input.value = values.customColors?.[input.dataset.customColor] || DEFAULT_CUSTOM_COLORS[input.dataset.customColor];
+  });
 }
 function closeSettings() {
   settingsScreen.hidden = true;
@@ -460,7 +520,7 @@ function closeSettings() {
   settingsTrigger.focus();
 }
 function openSettings() {
-  draftPreferences = { ...preferences };
+  draftPreferences = { ...preferences, customColors: { ...preferences.customColors } };
   renderSettings(draftPreferences);
   settingsScreen.hidden = false;
   document.body.classList.add('settings-open');
@@ -472,16 +532,20 @@ settingGroups.forEach(group => group.addEventListener('click', event => {
   draftPreferences[group.dataset.setting] = button.dataset.value;
   renderSettings(draftPreferences);
 }));
+customColorInputs.forEach(input => input.addEventListener('input', () => {
+  draftPreferences.customColors[input.dataset.customColor] = input.value;
+}));
 settingsTrigger.addEventListener('click', openSettings);
 $('#settings-back').addEventListener('click', closeSettings);
 $('#settings-cancel').addEventListener('click', closeSettings);
 $('#settings-save').addEventListener('click', () => {
-  preferences = { ...draftPreferences };
-  document.body.dataset.theme = preferences.theme;
+  preferences = { ...draftPreferences, customColors: { ...draftPreferences.customColors } };
+  applyTheme(preferences);
   try { localStorage.setItem('mnc-settings', JSON.stringify(preferences)); } catch { /* storage unavailable */ }
   closeSettings();
 });
-document.body.dataset.theme = preferences.theme;
+applyTheme();
+updateOverallScore();
 window.addEventListener('keydown', event => {
   if (settingsScreen.hidden) return;
   if (event.key === 'Escape') {
