@@ -16,6 +16,7 @@ export default async function handler(req, res) {
       artist: track.artistName,
       artwork: track.artworkUrl100,
       preview: track.previewUrl,
+      duration: track.trackTimeMillis,
       collection: track.collectionName
     }));
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600');

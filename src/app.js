@@ -75,6 +75,7 @@ function finish(won) {
   const { score, track } = round;
   if (track) saveHistory(track, score);
   clearRound();
+  document.body.classList.add('result-screen');
   elements.status.textContent = won ? 'ROUND COMPLETE' : 'ROUND OVER';
   elements.winResult.hidden = !won;
   elements.lossResult.hidden = won;
@@ -117,18 +118,22 @@ function press(lane, point) {
   if (!round) return;
   const elapsed = round.clock();
   const candidates = round.beats
-    .filter(item => !item.hit && !item.missed && !item.holding && item.lane === lane &&
+    .filter(item => !item.hit && !item.missed && !item.holding && (point || item.lane === lane) &&
       item.time - elapsed <= LEAD)
     .sort((a, b) => Math.abs(a.time - elapsed) - Math.abs(b.time - elapsed));
   const beat = point
     ? candidates.find(item => {
       if (!item.element) return false;
       const rect = item.element.getBoundingClientRect();
-      return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+      const dx = point.x - (rect.left + rect.width / 2);
+      const dy = point.y - (rect.top + rect.height / 2);
+      const radius = Math.hypot(rect.width / 2, rect.height / 2) + 26;
+      return dx * dx + dy * dy <= radius * radius;
     })
     : candidates[0];
   if (!beat) {
-    const nearbyTile = point && candidates.find(item => item.element);
+    const nearbyTile = point && round.beats.find(item => !item.hit && !item.missed && !item.holding &&
+      item.lane === lane && item.element && item.time - elapsed <= LEAD);
     if (nearbyTile) {
       missBeat(nearbyTile, 'OFF TILE!');
       return;
@@ -188,6 +193,7 @@ function tick() {
 
 async function startTrack(track) {
   clearRound();
+  document.body.classList.remove('result-screen');
   const current = generation;
   lastTrack = track;
   const cfg = DIFFICULTY[difficulty];
@@ -240,8 +246,9 @@ async function startTrack(track) {
       console.warn('Preview decode failed, using direct playback:', decodeError);
       element = new Audio(audioUrl);
       await element.play();
-      duration = Number.isFinite(element.duration) ? element.duration : 30;
-      beats = applyDifficulty(syntheticBeats(duration), difficulty, holdTiles);
+      duration = Number.isFinite(element.duration) ? element.duration : Number.POSITIVE_INFINITY;
+      const fallbackLength = Number.isFinite(duration) ? duration : Math.max(180, (track.duration || 0) / 1000);
+      beats = applyDifficulty(syntheticBeats(fallbackLength), difficulty, holdTiles);
       clock = () => element.currentTime;
     }
     if (current !== generation) {
@@ -250,6 +257,15 @@ async function startTrack(track) {
       return;
     }
     round = { source, element, track, duration, beats, clock, score: 0, lives: 3, frame: 0, window: cfg.window, multiplier: cfg.score };
+    if (element) {
+      if (Number.isFinite(element.duration)) round.duration = element.duration;
+      element.addEventListener('loadedmetadata', () => {
+        if (round?.element === element && Number.isFinite(element.duration)) round.duration = element.duration;
+      }, { once: true });
+      element.addEventListener('ended', () => {
+        if (round?.element === element) finish(true);
+      }, { once: true });
+    }
     document.body.classList.add('playing');
     elements.overlay.hidden = true;
     elements.status.textContent = 'FEEL THE BEAT';
@@ -270,6 +286,7 @@ function mapTrack(track) {
     artist: track.artistName ?? track.artist,
     artwork: track.artworkUrl100 ?? track.artwork,
     preview: track.previewUrl ?? track.preview,
+    duration: track.trackTimeMillis ?? track.duration,
     collection: track.collectionName ?? track.collection
   };
 }
@@ -298,7 +315,7 @@ function saveHistory(track, score) {
   try {
     const history = JSON.parse(localStorage.getItem('mnc-history') || '[]')
       .filter(entry => entry.title !== track.title || entry.artist !== track.artist);
-    history.unshift({ title: track.title, artist: track.artist, artwork: track.artwork, preview: track.preview, score });
+    history.unshift({ title: track.title, artist: track.artist, artwork: track.artwork, preview: track.preview, duration: track.duration, score });
     localStorage.setItem('mnc-history', JSON.stringify(history.slice(0, 10)));
     renderHistory();
   } catch (error) {
@@ -391,12 +408,14 @@ elements.action.addEventListener('click', () => {
   if (lastTrack) startTrack(lastTrack);
 });
 elements.continue.addEventListener('click', () => {
+  document.body.classList.remove('result-screen');
   elements.overlay.hidden = true;
   elements.winResult.hidden = true;
   elements.continue.hidden = true;
   elements.status.textContent = 'READY WHEN YOU ARE';
 });
 elements.stop.addEventListener('click', () => {
+  document.body.classList.remove('result-screen');
   clearRound();
   elements.status.textContent = 'READY WHEN YOU ARE';
   showOverlay('READY FOR ANOTHER?', 'Your beat is waiting.', 'Pick a song from the track list, or replay your last one.', true);
