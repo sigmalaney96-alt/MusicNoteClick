@@ -50,6 +50,22 @@ export function isWithinHitWindow(beatTime, elapsed, window) {
   return Math.abs(beatTime - elapsed) <= window + 1e-9;
 }
 
+export const TILE_SPEEDS = Object.freeze({ slow: 240, normal: 360, fast: 540 });
+
+export function tileMotion(hitY, remaining, speed, holdDuration = 0) {
+  const height = 60 + holdDuration * speed;
+  return {
+    leadTime: hitY / speed,
+    height,
+    top: hitY - remaining * speed - height / 2
+  };
+}
+
+export function isPointInExpandedRect(point, rect, padding = 12) {
+  return point.x >= rect.left - padding && point.x <= rect.right + padding &&
+    point.y >= rect.top - padding && point.y <= rect.bottom + padding;
+}
+
 export function applyDifficulty(beats, level = 'medium', holds = true) {
   const cfg = DIFFICULTY[level] || DIFFICULTY.medium;
   return beats
