@@ -13,7 +13,18 @@ const elements = {
   winArtist: $('#win-artist'), winScore: $('#win-score'), lossResult: $('#loss-result'),
   lossScore: $('#loss-score'), continue: $('#continue-button')
 };
-const LEAD = 0.9;
+const SPEEDS = { slow: 1.3, normal: 0.9, fast: 0.55 };
+const EMOJI_IMAGES = { '🐻': '/icons/emoji-bear.svg', '🐶': '/icons/emoji-dog.svg', '🐱': '/icons/emoji-cat.svg', '🐸': '/icons/emoji-frog.svg' };
+const DEFAULT_PREFERENCES = { speed: 'normal', theme: 'jazz', emoji: '♫' };
+let preferences = { ...DEFAULT_PREFERENCES };
+try {
+  const savedPreferences = JSON.parse(localStorage.getItem('mnc-settings') || '{}');
+  preferences = {
+    speed: SPEEDS[savedPreferences.speed] ? savedPreferences.speed : DEFAULT_PREFERENCES.speed,
+    theme: ['jazz', 'caffeinated', 'ocean'].includes(savedPreferences.theme) ? savedPreferences.theme : DEFAULT_PREFERENCES.theme,
+    emoji: ['♫', '🐻', '🐶', '🐱', '🐸'].includes(savedPreferences.emoji) ? savedPreferences.emoji : DEFAULT_PREFERENCES.emoji
+  };
+} catch { preferences = { ...DEFAULT_PREFERENCES }; }
 const KEYS = ['d', 'f', 'j', 'k'];
 let context;
 let round;
@@ -174,16 +185,27 @@ function tick() {
     }
     if (beat.hit || beat.missed) continue;
     const remaining = beat.time - elapsed;
-    if (remaining <= LEAD && remaining >= -round.window - (beat.hold || 0)) {
+    if (remaining <= round.lead && remaining >= -round.window - (beat.hold || 0)) {
       if (!beat.element) {
         beat.element = document.createElement('div');
         beat.element.className = `tile tile-${beat.lane}${beat.hold ? ' tile-hold' : ''}`;
-        beat.element.textContent = beat.hold ? '♪ HOLD' : '♫';
-        beat.height = 60 + (beat.hold || 0) * (hitY / LEAD);
+        if (EMOJI_IMAGES[preferences.emoji]) {
+          const icon = document.createElement('img');
+          icon.className = 'tile-emoji';
+          icon.src = EMOJI_IMAGES[preferences.emoji];
+          icon.alt = '';
+          beat.element.append(icon);
+          if (beat.hold) {
+            const label = document.createElement('span');
+            label.textContent = 'HOLD';
+            beat.element.append(label);
+          }
+        } else beat.element.textContent = beat.hold ? `${preferences.emoji} HOLD` : preferences.emoji;
+        beat.height = 60 + (beat.hold || 0) * (hitY / round.lead);
         beat.element.style.height = `${beat.height}px`;
         elements.tiles.append(beat.element);
       }
-      beat.element.style.top = `${hitY - remaining / LEAD * hitY - beat.height / 2}px`;
+      beat.element.style.top = `${hitY - remaining / round.lead * hitY - beat.height / 2}px`;
     }
   }
   if (!round) return;
@@ -256,7 +278,7 @@ async function startTrack(track) {
       if (element) element.pause();
       return;
     }
-    round = { source, element, track, duration, beats, clock, score: 0, lives: 3, frame: 0, window: cfg.window, multiplier: cfg.score };
+    round = { source, element, track, duration, beats, clock, score: 0, lives: 3, frame: 0, lead: SPEEDS[preferences.speed], window: cfg.window, multiplier: cfg.score };
     if (element) {
       if (Number.isFinite(element.duration)) round.duration = element.duration;
       element.addEventListener('loadedmetadata', () => {
@@ -426,6 +448,63 @@ document.querySelectorAll('#difficulty button').forEach(button => {
     document.querySelectorAll('#difficulty button').forEach(item => item.classList.toggle('active', item === button));
     elements.difficultyHint.textContent = button.dataset.hint;
   });
+});
+
+const settingsScreen = $('#settings-screen');
+const settingsTrigger = $('#settings-trigger');
+const settingGroups = [...document.querySelectorAll('[data-setting]')];
+let draftPreferences = { ...preferences };
+function renderSettings(values) {
+  settingGroups.forEach(group => group.querySelectorAll('button').forEach(button => {
+    button.setAttribute('aria-pressed', String(button.dataset.value === values[group.dataset.setting]));
+  }));
+}
+function closeSettings() {
+  settingsScreen.hidden = true;
+  document.body.classList.remove('settings-open');
+  settingsTrigger.focus();
+}
+function openSettings() {
+  draftPreferences = { ...preferences };
+  renderSettings(draftPreferences);
+  settingsScreen.hidden = false;
+  document.body.classList.add('settings-open');
+  $('#settings-back').focus();
+}
+settingGroups.forEach(group => group.addEventListener('click', event => {
+  const button = event.target.closest('button[data-value]');
+  if (!button) return;
+  draftPreferences[group.dataset.setting] = button.dataset.value;
+  renderSettings(draftPreferences);
+}));
+settingsTrigger.addEventListener('click', openSettings);
+$('#settings-back').addEventListener('click', closeSettings);
+$('#settings-cancel').addEventListener('click', closeSettings);
+$('#settings-save').addEventListener('click', () => {
+  preferences = { ...draftPreferences };
+  document.body.dataset.theme = preferences.theme;
+  try { localStorage.setItem('mnc-settings', JSON.stringify(preferences)); } catch { /* storage unavailable */ }
+  closeSettings();
+});
+document.body.dataset.theme = preferences.theme;
+window.addEventListener('keydown', event => {
+  if (settingsScreen.hidden) return;
+  if (event.key === 'Escape') {
+    closeSettings();
+    return;
+  }
+  if (event.key === 'Tab') {
+    const focusable = [...settingsScreen.querySelectorAll('button:not([disabled])')];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 });
 elements.holdToggle.checked = holdTiles;
 elements.holdToggle.addEventListener('change', () => {

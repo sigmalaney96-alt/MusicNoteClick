@@ -18,7 +18,7 @@
         <a class="brand" href="/" aria-label="MusicNoteClick home">
           <img class="brand-icon" src="/icons/icon.svg" alt="" width="42" height="42"><span>MusicNote<span>Click</span><small>FIND YOUR RHYTHM</small></span>
         </a>
-        <div class="top-right"><button class="install-button" id="install-button" hidden>INSTALL APP</button><span class="live-dot"></span><span class="copyright-top">COPYRIGHT © 2026 MUSICNOTECLICK</span><span class="sparkle" aria-hidden="true"></span></div>
+        <div class="top-right"><button class="settings-trigger" id="settings-trigger" type="button" aria-label="Open settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"></circle><circle cx="12" cy="12" r="7.4"></circle><path d="M12 1.8v2.1M12 20.1v2.1M1.8 12h2.1M20.1 12h2.1M4.8 4.8l1.5 1.5m11.4 11.4 1.5 1.5m0-14.4-1.5 1.5M6.3 17.7l-1.5 1.5"></path></svg></button><button class="install-button" id="install-button" hidden>INSTALL APP</button><span class="live-dot"></span><span class="copyright-top">COPYRIGHT © 2026 MUSICNOTECLICK</span><span class="sparkle" aria-hidden="true"></span></div>
       </header>
 
       <main>
@@ -100,6 +100,16 @@
         </div>
         <div class="how-to"><span class="how-number">01</span><div><strong>CHOOSE YOUR JAM</strong><small>Find a song that moves you.</small></div><span class="how-arrow">↗</span><span class="how-number">02</span><div><strong>FOLLOW THE BEAT</strong><small>Tap a tile's lane whenever you're ready.</small></div><span class="how-arrow">↗</span><span class="how-number">03</span><div><strong>KEEP THE VIBE ALIVE</strong><small>Miss three and it's a wrap.</small></div></div>
       </main>
+      <section class="settings-screen" id="settings-screen" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+        <div class="settings-panel">
+          <div class="settings-header"><button class="settings-back" id="settings-back" type="button" aria-label="Back to game">←</button><div><div class="eyebrow dark">MAKE IT YOURS</div><h2 id="settings-title">Settings</h2></div><span class="settings-mark" aria-hidden="true"></span></div>
+          <p class="settings-intro">Tune the game to your own kind of rhythm.</p>
+          <fieldset class="settings-group"><legend>Tile speed</legend><p>How quickly the tiles move toward the beat.</p><div class="settings-options" data-setting="speed"><button type="button" data-value="slow" aria-pressed="false"><span>↓</span><strong>Slow</strong></button><button type="button" data-value="normal" aria-pressed="true"><span>♪</span><strong>Normal</strong><small>Just right</small></button><button type="button" data-value="fast" aria-pressed="false"><span>↑↑</span><strong>Super fast</strong></button></div></fieldset>
+          <fieldset class="settings-group"><legend>Choose a theme</legend><p>Give your rhythm room a fresh look.</p><div class="settings-options theme-options" data-setting="theme"><button type="button" data-value="jazz" aria-pressed="true"><span class="theme-swatch swatch-jazz"></span><strong>Jazz</strong></button><button type="button" data-value="caffeinated" aria-pressed="false"><span class="theme-swatch swatch-caffeinated"></span><strong>Caffeinated</strong></button><button type="button" data-value="ocean" aria-pressed="false"><span class="theme-swatch swatch-ocean"></span><strong>Ocean</strong></button></div></fieldset>
+          <fieldset class="settings-group emoji-group"><legend>Tile emoji</legend><p>Pick a little buddy to ride the beat.</p><div class="emoji-options" data-setting="emoji"><button type="button" data-value="♫" aria-label="Music note" aria-pressed="true"><span aria-hidden="true">♫</span><small>Note</small></button><button type="button" data-value="🐻" aria-label="Bear" aria-pressed="false"><img src="/icons/emoji-bear.svg" alt=""><small>Bear</small></button><button type="button" data-value="🐶" aria-label="Dog" aria-pressed="false"><img src="/icons/emoji-dog.svg" alt=""><small>Dog</small></button><button type="button" data-value="🐱" aria-label="Cat" aria-pressed="false"><img src="/icons/emoji-cat.svg" alt=""><small>Cat</small></button><button type="button" data-value="🐸" aria-label="Frog" aria-pressed="false"><img src="/icons/emoji-frog.svg" alt=""><small>Frog</small></button></div></fieldset>
+          <div class="settings-actions"><button class="settings-cancel" id="settings-cancel" type="button">CANCEL</button><button class="settings-save" id="settings-save" type="button">SAVE CHANGES <span>↗</span></button></div>
+        </div>
+      </section>
       <footer><span>MusicNoteClick <b>✳</b></span><span>MADE TO MOVE YOU. © 2026</span><span>GOOD VIBES ONLY ♡</span><small class="copyright-link">Copyright <a href="https://docs.google.com/document/d/158hNFXgQMeHG0Kt8309K-C7iugPUJ4ah8aFwOM5FTU4/edit?usp=drivesdk" target="_blank" rel="noopener noreferrer">view details</a></small></footer>
     </div>
     <script type="module" src="/src/app.js"></script>
