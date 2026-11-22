@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectBeats, syntheticBeats, applyDifficulty, isWithinHitWindow, DIFFICULTY } from '../src/beats.js';
+import { detectBeats, syntheticBeats, applyDifficulty, isWithinHitWindow, DIFFICULTY, TILE_SPEEDS, tileMotion, isPointInExpandedRect } from '../src/beats.js';
 import { allowedPreview } from '../api/audio.js';
 
 test('detects separated transients after the lead-in and assigns playable lanes', () => {
@@ -50,6 +50,24 @@ test('hit timing window is symmetric around the beat and excludes early or late 
   assert.equal(isWithinHitWindow(4, 4.22, 0.22), true);
   assert.equal(isWithinHitWindow(4, 3.77, 0.22), false);
   assert.equal(isWithinHitWindow(4, 4.23, 0.22), false);
+});
+
+test('tile speed is measured in pixels per second at every stage size', () => {
+  const normalSpeed = TILE_SPEEDS.normal;
+  const shortStage = tileMotion(300, 0.5, normalSpeed);
+  const tallStage = tileMotion(500, 0.5, normalSpeed);
+  assert.equal(shortStage.top - tileMotion(300, 0.75, normalSpeed).top, normalSpeed * 0.25);
+  assert.equal(tallStage.top - tileMotion(500, 0.75, normalSpeed).top, normalSpeed * 0.25);
+  assert.equal(tileMotion(300, 0, normalSpeed, 0.5).height, 60 + normalSpeed * 0.5);
+  assert.ok(TILE_SPEEDS.slow < TILE_SPEEDS.normal);
+  assert.ok(TILE_SPEEDS.normal < TILE_SPEEDS.fast);
+});
+
+test('visible tile hit targets include a small, accurate touch margin', () => {
+  const rect = { left: 100, right: 200, top: 300, bottom: 360 };
+  assert.equal(isPointInExpandedRect({ x: 99, y: 359 }, rect), true);
+  assert.equal(isPointInExpandedRect({ x: 220, y: 330 }, rect), false);
+  assert.equal(isPointInExpandedRect({ x: 150, y: 330 }, rect), true);
 });
 
 test('applyDifficulty can disable hold tiles while keeping the beat grid', () => {

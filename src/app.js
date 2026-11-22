@@ -1,4 +1,4 @@
-import { detectBeats, syntheticBeats, applyDifficulty, isWithinHitWindow, DIFFICULTY } from './beats.js';
+import { detectBeats, syntheticBeats, applyDifficulty, isWithinHitWindow, DIFFICULTY, TILE_SPEEDS, tileMotion } from './beats.js';
 
 const $ = selector => document.querySelector(selector);
 const elements = {
@@ -13,14 +13,13 @@ const elements = {
   winArtist: $('#win-artist'), winScore: $('#win-score'), lossResult: $('#loss-result'),
   lossScore: $('#loss-score'), continue: $('#continue-button')
 };
-const SPEEDS = { slow: 1.3, normal: 0.9, fast: 0.55 };
 const EMOJI_IMAGES = { '🐻': '/icons/emoji-bear.svg', '🐶': '/icons/emoji-dog.svg', '🐱': '/icons/emoji-cat.svg', '🐸': '/icons/emoji-frog.svg' };
 const DEFAULT_PREFERENCES = { speed: 'normal', theme: 'jazz', emoji: '♫' };
 let preferences = { ...DEFAULT_PREFERENCES };
 try {
   const savedPreferences = JSON.parse(localStorage.getItem('mnc-settings') || '{}');
   preferences = {
-    speed: SPEEDS[savedPreferences.speed] ? savedPreferences.speed : DEFAULT_PREFERENCES.speed,
+    speed: TILE_SPEEDS[savedPreferences.speed] ? savedPreferences.speed : DEFAULT_PREFERENCES.speed,
     theme: ['jazz', 'caffeinated', 'ocean'].includes(savedPreferences.theme) ? savedPreferences.theme : DEFAULT_PREFERENCES.theme,
     emoji: ['♫', '🐻', '🐶', '🐱', '🐸'].includes(savedPreferences.emoji) ? savedPreferences.emoji : DEFAULT_PREFERENCES.emoji
   };
@@ -129,22 +128,13 @@ function press(lane, point) {
   if (!round) return;
   const elapsed = round.clock();
   const candidates = round.beats
-    .filter(item => !item.hit && !item.missed && !item.holding && (point || item.lane === lane) &&
+    .filter(item => !item.hit && !item.missed && !item.holding && item.lane === lane &&
       isWithinHitWindow(item.time, elapsed, round.window))
     .sort((a, b) => Math.abs(a.time - elapsed) - Math.abs(b.time - elapsed));
-  const beat = point
-    ? candidates.find(item => {
-      if (!item.element) return false;
-      const rect = item.element.getBoundingClientRect();
-      const dx = point.x - (rect.left + rect.width / 2);
-      const dy = point.y - (rect.top + rect.height / 2);
-      const radius = Math.hypot(rect.width / 2, rect.height / 2) + 26;
-      return dx * dx + dy * dy <= radius * radius;
-    })
-    : candidates[0];
+  const beat = candidates[0];
   if (!beat) {
     const nearbyTile = point && round.beats.find(item => !item.hit && !item.missed && !item.holding &&
-      item.lane === lane && item.element && isWithinHitWindow(item.time, elapsed, round.window));
+      item.lane === lane && item.element);
     if (nearbyTile) {
       missBeat(nearbyTile, 'OFF TILE!');
       return;
@@ -185,7 +175,8 @@ function tick() {
     }
     if (beat.hit || beat.missed) continue;
     const remaining = beat.time - elapsed;
-    if (remaining <= round.lead && remaining >= -round.window - (beat.hold || 0)) {
+    const motion = tileMotion(hitY, remaining, round.speed, beat.hold || 0);
+    if (remaining <= motion.leadTime && remaining >= -round.window - (beat.hold || 0)) {
       if (!beat.element) {
         beat.element = document.createElement('div');
         beat.element.className = `tile tile-${beat.lane}${beat.hold ? ' tile-hold' : ''}`;
@@ -201,11 +192,11 @@ function tick() {
             beat.element.append(label);
           }
         } else beat.element.textContent = beat.hold ? `${preferences.emoji} HOLD` : preferences.emoji;
-        beat.height = 60 + (beat.hold || 0) * (hitY / round.lead);
+        beat.height = motion.height;
         beat.element.style.height = `${beat.height}px`;
         elements.tiles.append(beat.element);
       }
-      beat.element.style.top = `${hitY - remaining / round.lead * hitY - beat.height / 2}px`;
+      beat.element.style.top = `${motion.top}px`;
     }
   }
   if (!round) return;
@@ -278,7 +269,7 @@ async function startTrack(track) {
       if (element) element.pause();
       return;
     }
-    round = { source, element, track, duration, beats, clock, score: 0, lives: 3, frame: 0, lead: SPEEDS[preferences.speed], window: cfg.window, multiplier: cfg.score };
+    round = { source, element, track, duration, beats, clock, score: 0, lives: 3, frame: 0, speed: TILE_SPEEDS[preferences.speed], window: cfg.window, multiplier: cfg.score };
     if (element) {
       if (Number.isFinite(element.duration)) round.duration = element.duration;
       element.addEventListener('loadedmetadata', () => {
