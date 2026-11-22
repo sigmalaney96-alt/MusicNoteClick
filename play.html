@@ -12,13 +12,13 @@
     <link rel="stylesheet" href="/style.css">
     <title>MusicNoteClick — play</title>
   </head>
-  <body>
+  <body class="play-app">
     <div class="app-shell">
       <header class="topbar">
         <a class="brand" href="/" aria-label="MusicNoteClick home">
           <img class="brand-icon" src="/icons/icon.svg" alt="" width="42" height="42"><span>MusicNote<span>Click</span><small>FIND YOUR RHYTHM</small></span>
         </a>
-        <div class="top-right"><button class="install-button" id="install-button" hidden>INSTALL ♪</button><span class="live-dot"></span> YOUR DAILY DOSE OF RHYTHM <span class="sparkle">✳</span></div>
+        <div class="top-right"><button class="install-button" id="install-button" hidden>INSTALL APP</button><span class="live-dot"></span><span class="copyright-top">COPYRIGHT © 2026 MUSICNOTECLICK</span><span class="sparkle" aria-hidden="true"></span></div>
       </header>
 
       <main>
@@ -37,7 +37,7 @@
           </div>
         </section>
 
-        <div class="section-heading"><div><div class="eyebrow dark">✦ &nbsp; READY, SET, PLAY</div><h2>Make some <em>noise.</em></h2></div><p>THE STAGE IS ALL YOURS <span>↘</span></p></div>
+        <div class="section-heading"><div><div class="eyebrow dark">THE MIDNIGHT SESSION</div><h2>Set the <em>groove.</em></h2></div><p>YOUR RETRO RHYTHM ROOM <span>↘</span></p></div>
 
         <div class="play-layout">
           <section class="game-card" aria-label="Rhythm game">
@@ -52,7 +52,7 @@
               <div class="lane-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
               <div class="stage-decor decor-left">✧</div><div class="stage-decor decor-right">✳</div>
               <div class="tiles" id="tiles" aria-hidden="true"></div>
-              <div class="hit-line"><span>✦</span></div>
+              <div class="hit-line"><span aria-hidden="true"></span></div>
               <div class="lane-keys" aria-hidden="true"><span>D</span><span>F</span><span>J</span><span>K</span></div>
               <div class="stage-overlay" id="overlay">
                 <div class="overlay-icon">♫</div>
@@ -73,7 +73,7 @@
                 </div>
                 <button class="primary-button" id="overlay-action" hidden>PLAY IT AGAIN <span>↗</span></button>
                 <button class="primary-button" id="continue-button" hidden>CONTINUE <span>↗</span></button>
-                <button class="install-button overlay-install" id="overlay-install" hidden>INSTALL THE APP ♪</button>
+                <button class="install-button overlay-install" id="overlay-install" hidden>INSTALL THE APP</button>
                 <div class="overlay-hint">TAP OR HOLD TILES · KEYS D F J K</div>
               </div>
               <div class="feedback" id="feedback" aria-live="polite"></div>
@@ -82,16 +82,16 @@
           </section>
 
           <aside class="library">
-            <div class="library-head"><div><div class="eyebrow dark">♫ &nbsp; THE GOOD STUFF</div><h2>Pick a <em>track.</em></h2></div><span class="library-star">✳</span></div>
-            <p class="library-description">Find a favorite and turn it all the way up.</p>
-            <form class="search" id="search-form"><label class="sr-only" for="search-input">Search songs or artists</label><span>⌕</span><input id="search-input" type="search" placeholder="Search songs or artists..." maxlength="100" required><button type="submit" aria-label="Search">↗</button></form>
-            <div class="list-title"><span>DIFFICULTY</span><span id="difficulty-hint">THE CLASSIC GROOVE</span></div>
+            <div class="library-head"><div><div class="eyebrow dark">LISTEN · PLAY · REPEAT</div><h2>Choose a <em>song.</em></h2></div><span class="library-star" aria-hidden="true"></span></div>
+            <p class="library-description">Set your song and difficulty before the first tile drops.</p>
+            <form class="search" id="search-form"><label class="sr-only" for="search-input">Search songs or artists</label><span class="search-icon" aria-hidden="true"></span><input id="search-input" type="search" placeholder="Search songs or artists..." maxlength="100" required><button type="submit" aria-label="Search">↗</button></form>
+            <div class="list-title"><span>SONG SETTINGS</span><span id="difficulty-hint">THE CLASSIC GROOVE</span></div>
             <div class="difficulty" id="difficulty">
               <button type="button" data-level="easy" data-hint="FEWER TILES, MORE TIME">EASY</button>
               <button type="button" data-level="medium" data-hint="THE CLASSIC GROOVE" class="active">MEDIUM</button>
               <button type="button" data-level="hard" data-hint="TIGHT TIMING, EVERY BEAT">HARD</button>
             </div>
-            <div class="list-title"><span>THE TRACK LIST</span><span>30 SEC PREVIEWS</span></div>
+            <div class="list-title"><span>THE TRACK LIST</span><span>SAMPLE LENGTH VARIES</span></div>
             <div id="track-list" class="track-list" aria-live="polite"><p class="list-message">Finding some good vibes...</p></div>
             <div class="list-title" id="history-title" hidden><span>PLAY HISTORY</span><span>TAP TO REPLAY</span></div>
             <div id="history-list" class="track-list history-list"></div>

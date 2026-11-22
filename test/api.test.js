@@ -18,7 +18,7 @@ test('search maps playable iTunes results and rejects empty searches', async t =
   t.mock.method(globalThis, 'fetch', async url => {
     fetched = url;
     return Response.json({ results: [
-      { trackId: 1, trackName: 'Song', artistName: 'Artist', previewUrl: 'https://audio-ssl.itunes.apple.com/a', artworkUrl100: 'https://example.com/art' },
+      { trackId: 1, trackName: 'Song', artistName: 'Artist', previewUrl: 'https://audio-ssl.itunes.apple.com/a', artworkUrl100: 'https://example.com/art', trackTimeMillis: 47231 },
       { trackName: 'No preview', artistName: 'Artist' }
     ] });
   });
@@ -28,6 +28,7 @@ test('search maps playable iTunes results and rejects empty searches', async t =
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.tracks.length, 1);
   assert.equal(res.body.tracks[0].title, 'Song');
+  assert.equal(res.body.tracks[0].duration, 47231);
   const empty = response();
   await search({ query: { term: '  ' } }, empty);
   assert.equal(empty.statusCode, 400);
