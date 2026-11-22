@@ -469,6 +469,42 @@ libraryTabs.forEach((tab, index) => {
   });
 });
 
+const INVITE_MESSAGES = [
+  'I downloaded this game and I can\u2019t stop playing the music🎧 and clicking these tiles Download MNC🔥 Now! https://bit.ly/MNCinstall',
+  'WOW THAT HITS THE SPOT, NO ADS, JUST MUSIC AND TILES PLAY NOW! https://bit.ly/MNCinstall',
+  'There\u2019s a new game on the block with no ads just tap and play all the songs https://bit.ly/MNCinstall'
+];
+const inviteScreen = $('#invite-screen');
+const inviteShare = $('#invite-share');
+function closeInvite() {
+  inviteScreen.hidden = true;
+  document.body.classList.remove('settings-open');
+  $('#invite-button').focus();
+}
+$('#invite-button').addEventListener('click', () => {
+  inviteScreen.hidden = false;
+  document.body.classList.add('settings-open');
+  inviteShare.focus();
+});
+$('#invite-close').addEventListener('click', closeInvite);
+inviteScreen.addEventListener('click', event => {
+  if (event.target === inviteScreen) closeInvite();
+});
+inviteShare.addEventListener('click', async () => {
+  const message = INVITE_MESSAGES[Math.floor(Math.random() * INVITE_MESSAGES.length)];
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'MusicNoteClick', text: message });
+    } else {
+      await navigator.clipboard.writeText(message);
+      notify('MESSAGE COPIED!');
+    }
+    closeInvite();
+  } catch (error) {
+    if (error.name === 'AbortError') return;
+    notify('SHARE UNAVAILABLE!');
+  }
+});
 elements.form.addEventListener('submit', event => {
   event.preventDefault();
   const term = elements.input.value.trim();
@@ -552,6 +588,10 @@ $('#settings-save').addEventListener('click', () => {
 applyTheme();
 updateOverallScore();
 window.addEventListener('keydown', event => {
+  if (!inviteScreen.hidden && event.key === 'Escape') {
+    closeInvite();
+    return;
+  }
   if (settingsScreen.hidden) return;
   if (event.key === 'Escape') {
     closeSettings();
@@ -592,7 +632,7 @@ for (const type of ['pointerup', 'pointercancel']) {
   });
 }
 window.addEventListener('keydown', event => {
-  if (event.repeat || !settingsScreen.hidden || event.target.matches('input, textarea, select, [contenteditable="true"]')) return;
+  if (event.repeat || !settingsScreen.hidden || !inviteScreen.hidden || event.target.matches('input, textarea, select, [contenteditable="true"]')) return;
   const lane = KEYS.indexOf(event.key.toLowerCase());
   if (lane !== -1) { event.preventDefault(); press(lane); }
 });
