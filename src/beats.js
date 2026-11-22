@@ -46,6 +46,10 @@ export const DIFFICULTY = {
   hard: { every: 1, window: 0.15, holdEvery: 3, hold: 0.6, score: 2, label: 'HARD' }
 };
 
+export function isWithinHitWindow(beatTime, elapsed, window) {
+  return Math.abs(beatTime - elapsed) <= window + 1e-9;
+}
+
 export function applyDifficulty(beats, level = 'medium', holds = true) {
   const cfg = DIFFICULTY[level] || DIFFICULTY.medium;
   return beats
