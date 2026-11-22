@@ -1,4 +1,4 @@
-import { detectBeats, syntheticBeats, applyDifficulty, DIFFICULTY } from './beats.js';
+import { detectBeats, syntheticBeats, applyDifficulty, isWithinHitWindow, DIFFICULTY } from './beats.js';
 
 const $ = selector => document.querySelector(selector);
 const elements = {
@@ -130,7 +130,7 @@ function press(lane, point) {
   const elapsed = round.clock();
   const candidates = round.beats
     .filter(item => !item.hit && !item.missed && !item.holding && (point || item.lane === lane) &&
-      item.time - elapsed <= LEAD)
+      isWithinHitWindow(item.time, elapsed, round.window))
     .sort((a, b) => Math.abs(a.time - elapsed) - Math.abs(b.time - elapsed));
   const beat = point
     ? candidates.find(item => {
@@ -144,7 +144,7 @@ function press(lane, point) {
     : candidates[0];
   if (!beat) {
     const nearbyTile = point && round.beats.find(item => !item.hit && !item.missed && !item.holding &&
-      item.lane === lane && item.element && item.time - elapsed <= LEAD);
+      item.lane === lane && item.element && isWithinHitWindow(item.time, elapsed, round.window));
     if (nearbyTile) {
       missBeat(nearbyTile, 'OFF TILE!');
       return;
@@ -528,7 +528,7 @@ for (const type of ['pointerup', 'pointercancel']) {
   });
 }
 window.addEventListener('keydown', event => {
-  if (event.repeat || event.target.matches('input, textarea, button')) return;
+  if (event.repeat || !settingsScreen.hidden || event.target.matches('input, textarea, select, [contenteditable="true"]')) return;
   const lane = KEYS.indexOf(event.key.toLowerCase());
   if (lane !== -1) { event.preventDefault(); press(lane); }
 });

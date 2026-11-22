@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectBeats, syntheticBeats, applyDifficulty, DIFFICULTY } from '../src/beats.js';
+import { detectBeats, syntheticBeats, applyDifficulty, isWithinHitWindow, DIFFICULTY } from '../src/beats.js';
 import { allowedPreview } from '../api/audio.js';
 
 test('detects separated transients after the lead-in and assigns playable lanes', () => {
@@ -42,6 +42,14 @@ test('applyDifficulty increases medium tile density, marks hold tiles, and tight
   assert.ok(DIFFICULTY.hard.window < DIFFICULTY.medium.window);
   assert.ok(DIFFICULTY.medium.window < DIFFICULTY.easy.window);
   assert.ok(DIFFICULTY.hard.score > DIFFICULTY.easy.score);
+});
+
+test('hit timing window is symmetric around the beat and excludes early or late inputs', () => {
+  assert.equal(isWithinHitWindow(4, 3.78, 0.22), true);
+  assert.equal(isWithinHitWindow(4, 4, 0.22), true);
+  assert.equal(isWithinHitWindow(4, 4.22, 0.22), true);
+  assert.equal(isWithinHitWindow(4, 3.77, 0.22), false);
+  assert.equal(isWithinHitWindow(4, 4.23, 0.22), false);
 });
 
 test('applyDifficulty can disable hold tiles while keeping the beat grid', () => {
