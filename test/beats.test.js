@@ -63,10 +63,11 @@ test('tile speed is measured in pixels per second at every stage size', () => {
   assert.ok(TILE_SPEEDS.normal < TILE_SPEEDS.fast);
 });
 
-test('visible tile hit targets include a small, accurate touch margin', () => {
+test('tile hit bubbles include the tile and a forgiving invisible touch area', () => {
   const rect = { left: 100, right: 200, top: 300, bottom: 360 };
   assert.equal(isPointInExpandedRect({ x: 99, y: 359 }, rect), true);
-  assert.equal(isPointInExpandedRect({ x: 220, y: 330 }, rect), false);
+  assert.equal(isPointInExpandedRect({ x: 239, y: 330 }, rect, 44), true);
+  assert.equal(isPointInExpandedRect({ x: 245, y: 330 }, rect, 44), false);
   assert.equal(isPointInExpandedRect({ x: 150, y: 330 }, rect), true);
 });
 

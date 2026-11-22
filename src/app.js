@@ -1,4 +1,4 @@
-import { detectBeats, syntheticBeats, applyDifficulty, isWithinHitWindow, DIFFICULTY, TILE_SPEEDS, tileMotion } from './beats.js';
+import { detectBeats, syntheticBeats, applyDifficulty, isWithinHitWindow, DIFFICULTY, TILE_SPEEDS, tileMotion, isPointInExpandedRect } from './beats.js';
 
 const $ = selector => document.querySelector(selector);
 const elements = {
@@ -20,7 +20,7 @@ try {
   const savedPreferences = JSON.parse(localStorage.getItem('mnc-settings') || '{}');
   preferences = {
     speed: TILE_SPEEDS[savedPreferences.speed] ? savedPreferences.speed : DEFAULT_PREFERENCES.speed,
-    theme: ['jazz', 'caffeinated', 'ocean'].includes(savedPreferences.theme) ? savedPreferences.theme : DEFAULT_PREFERENCES.theme,
+    theme: ['jazz', 'caffeinated', 'ocean', 'ember', 'earth', 'cotton-candy'].includes(savedPreferences.theme) ? savedPreferences.theme : DEFAULT_PREFERENCES.theme,
     emoji: ['♫', '🐻', '🐶', '🐱', '🐸'].includes(savedPreferences.emoji) ? savedPreferences.emoji : DEFAULT_PREFERENCES.emoji
   };
 } catch { preferences = { ...DEFAULT_PREFERENCES }; }
@@ -131,14 +131,17 @@ function press(lane, point) {
     .filter(item => !item.hit && !item.missed && !item.holding && item.lane === lane &&
       isWithinHitWindow(item.time, elapsed, round.window))
     .sort((a, b) => Math.abs(a.time - elapsed) - Math.abs(b.time - elapsed));
-  const beat = candidates[0];
+  const bubbleBeat = point && round.beats
+    .filter(item => !item.hit && !item.missed && !item.holding && item.element &&
+      isPointInExpandedRect(point, item.element.getBoundingClientRect(), 44))
+    .sort((a, b) => {
+      const rectA = a.element.getBoundingClientRect();
+      const rectB = b.element.getBoundingClientRect();
+      return Math.hypot(point.x - (rectA.left + rectA.width / 2), point.y - (rectA.top + rectA.height / 2)) -
+        Math.hypot(point.x - (rectB.left + rectB.width / 2), point.y - (rectB.top + rectB.height / 2));
+    })[0];
+  const beat = bubbleBeat || candidates[0];
   if (!beat) {
-    const nearbyTile = point && round.beats.find(item => !item.hit && !item.missed && !item.holding &&
-      item.lane === lane && item.element);
-    if (nearbyTile) {
-      missBeat(nearbyTile, 'OFF TILE!');
-      return;
-    }
     round.lives--;
     updateStats();
     notify('EMPTY LANE!');
@@ -149,9 +152,10 @@ function press(lane, point) {
     beat.holding = true;
     beat.element?.classList.add('holding');
     notify('HOLD!');
-    return;
+    return beat.lane;
   }
   scoreBeat(beat, elapsed);
+  return beat.lane;
 }
 
 function release(lane) {
@@ -507,8 +511,8 @@ elements.stage.addEventListener('pointerdown', event => {
   if (!round) return;
   const rect = elements.stage.getBoundingClientRect();
   const lane = Math.max(0, Math.min(3, Math.floor((event.clientX - rect.left) / rect.width * 4)));
-  activePointers.set(event.pointerId, lane);
-  press(lane, { x: event.clientX, y: event.clientY });
+  const hitLane = press(lane, { x: event.clientX, y: event.clientY });
+  activePointers.set(event.pointerId, hitLane ?? lane);
 });
 for (const type of ['pointerup', 'pointercancel']) {
   elements.stage.addEventListener(type, event => {
