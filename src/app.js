@@ -13,7 +13,7 @@ const elements = {
   winArtist: $('#win-artist'), winScore: $('#win-score'), lossResult: $('#loss-result'),
   lossScore: $('#loss-score'), continue: $('#continue-button'), overallScore: $('#overall-score')
 };
-const EMOJI_IMAGES = { '🐻': '/icons/emoji-bear.svg', '🐶': '/icons/emoji-dog.svg', '🐱': '/icons/emoji-cat.svg', '🐸': '/icons/emoji-frog.svg' };
+const EMOJI_IMAGES = { '🐻': '/icons/emoji-bear.svg', '🐶': '/icons/emoji-dog.svg', '🐱': '/icons/emoji-cat.svg', '🐸': '/icons/emoji-frog.svg', '🍿': '/icons/emoji-popcorn.svg', '🍓': '/icons/emoji-strawberry.svg', '🐯': '/icons/emoji-tiger.svg', '🦄': '/icons/emoji-unicorn.svg', '🍕': '/icons/emoji-pizza.svg' };
 const DEFAULT_CUSTOM_COLORS = Object.freeze({ primary: '#4a3671', accent: '#ff9dc7', third: '#a8dcff' });
 const DEFAULT_PREFERENCES = { speed: 'normal', theme: 'jazz', emoji: '♫', customColors: { ...DEFAULT_CUSTOM_COLORS } };
 const isValidColor = value => typeof value === 'string' && /^#[\da-f]{6}$/i.test(value);
