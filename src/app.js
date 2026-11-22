@@ -43,6 +43,10 @@ let holdTiles = true;
 try { holdTiles = localStorage.getItem('mnc-holds') !== '0'; } catch { holdTiles = true; }
 const activePointers = new Map();
 let overallScore = 0;
+try {
+  const savedOverall = Number(localStorage.getItem('mnc-overall-score'));
+  if (Number.isFinite(savedOverall) && savedOverall > 0) overallScore = Math.floor(savedOverall);
+} catch { overallScore = 0; }
 
 function showOverlay(kicker, title, copy, allowReplay = false) {
   elements.kicker.textContent = kicker;
@@ -82,6 +86,7 @@ function updateStats() {
 
 function updateOverallScore() {
   elements.overallScore.textContent = String(overallScore).padStart(6, '0');
+  try { localStorage.setItem('mnc-overall-score', String(overallScore)); } catch { /* storage unavailable */ }
 }
 
 function notify(text) {
